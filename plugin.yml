@@ -1,0 +1,19 @@
+name: SeekInventory
+main: pers.tany.seekinventory.Main
+version: 1.0.2
+author: tany
+description: 打开离线玩家背包/查询所有玩家是否拥有某物
+depend: [ YukiNoaAPI ]
+commands:
+  SeekInventory:
+    usage: /SeekInventory
+    aliases: [ seek,si ]
+  Inv:
+    usage: /Inv
+permissions:
+  si.open:
+    default: op
+  si.edit:
+    default: op
+  si.check:
+    default: op

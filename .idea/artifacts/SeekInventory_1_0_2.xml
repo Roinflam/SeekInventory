@@ -1,0 +1,11 @@
+<component name="ArtifactManager">
+  <artifact type="jar" build-on-make="true" name="SeekInventory-1.0.2">
+    <output-path>$PROJECT_DIR$/..</output-path>
+    <root id="archive" name="SeekInventory-1.0.2.jar">
+      <element id="module-output" name="SeekInventory" />
+      <element id="file-copy" path="$PROJECT_DIR$/config.yml" />
+      <element id="file-copy" path="$PROJECT_DIR$/data.yml" />
+      <element id="file-copy" path="$PROJECT_DIR$/plugin.yml" />
+    </root>
+  </artifact>
+</component>
