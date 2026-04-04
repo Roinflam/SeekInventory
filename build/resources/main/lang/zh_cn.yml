@@ -1,0 +1,176 @@
+# zh_cn.yml
+# SeekInventory 简体中文语言文件
+
+# ========================================
+# 控制台消息
+# ========================================
+console:
+  warning-prefix: "§e[警告] §7"
+  error-prefix: "§c[错误] §7"
+  database-init-success: "§7[§b背包查看§7] §a数据库初始化成功"
+  database-init-failed: "§7[§b背包查看§7] §c数据库初始化失败: {error}"
+  database-table-created: "§7[§b背包查看§7] §7数据库表结构创建/验证完成"
+  database-table-create-failed: "§7[§b背包查看§7] §c创建数据库表失败: {error}"
+  database-closed: "§7[§b背包查看§7] §7数据库连接池已关闭"
+  auto-save-disabled: "§7[§b背包查看§7] §7自动保存已禁用"
+  auto-save-started: "§7[§b背包查看§7] §a定时保存任务已启动（间隔: {interval}分钟）"
+  language-detected: "§7[§b背包查看§7] §7自动检测系统语言: §e{language}"
+  language-files-generated: "§a[SeekInventory] 自动生成语言文件: §e{files}"
+  language-load-failed: "§e[SeekInventory] 加载语言文件 '{language}' 失败，使用默认语言"
+  language-default-failed: "§e[SeekInventory] 加载默认语言备用文件失败: {error}"
+  language-file-skip: "§e[SeekInventory] 语言文件 {file} 不在 jar 中,跳过"
+  config-version-changed: "§e[SeekInventory] 主版本变化 ({old} → {new})，覆盖配置文件"
+  config-updated: "§a[SeekInventory] 配置文件已更新到新版本"
+  config-version-parse-failed: "§e[SeekInventory] 无法解析版本号: {version}"
+
+# ========================================
+# 配置消息
+# ========================================
+config:
+  invalid-value-reset: "§7[§b背包查看§7] §e{field} 不能小于1，已重置为 {value}"
+
+# ========================================
+# 数据库消息
+# ========================================
+database:
+  connection-not-initialized: "数据库连接池未初始化"
+
+# ========================================
+# 插件消息
+# ========================================
+plugin:
+  enabled: "§7[§b背包查看§7] §a插件已启用"
+  disabled: "§7[§b背包查看§7] §7插件已卸载"
+
+# ========================================
+# 快照消息
+# ========================================
+snapshot:
+  auto-save-complete: "§7[§b背包查看§7] §a已自动保存所有在线玩家的背包快照"
+  save-success: "§7[§b背包查看§7] §a已保存 {count} 位在线玩家的快照"
+  batch-save-complete: "§7[§b背包查看§7] §a批量保存完成，成功 {count} 位玩家（总耗时: {time}ms）"
+  save-player-success: "§7[§b背包查看§7] §7保存玩家 {player} 快照完成（耗时: {time}ms）"
+  save-player-failed: "§7[§b背包查看§7] §c保存玩家 {player} 快照失败: {error}"
+  save-failed: "§7[§b背包查看§7] §c保存快照失败: {error}"
+  clean-old-failed: "§7[§b背包查看§7] §c清理旧快照失败: {error}"
+  clean-success: "§7[§b背包查看§7] §a已清理 {count} 条旧快照记录"
+  get-list-failed: "§7[§b背包查看§7] §c获取快照列表失败: {error}"
+  get-snapshot-failed: "§7[§b背包查看§7] §c获取快照失败: {error}"
+  get-count-failed: "§7[§b背包查看§7] §c获取快照数量失败: {error}"
+  cache-cleared: "§7[§b背包查看§7] §a已清除所有缓存"
+  type-inventory: "背包"
+  type-enderchest: "末影箱"
+
+  # 翻页按钮
+  button-prev: "§6§l◀ §e上一页"
+  button-prev-disabled: "§7§l◀ 上一页"
+  button-separator: "  "
+  button-next: "§6§l下一页 §e▶"
+  button-next-disabled: "§7§l下一页 ▶"
+  hover-prev: "§e点击查看上一页"
+  hover-next: "§e点击查看下一页"
+
+# ========================================
+# 离线玩家同步消息
+# ========================================
+offline:
+  load-inventory-failed: "§7[§b背包查看§7] §c加载离线玩家 {player} 背包失败: {error}"
+  load-enderchest-failed: "§7[§b背包查看§7] §c加载离线玩家 {player} 末影箱失败: {error}"
+  save-inventory-success: "§7[§b背包查看§7] §a已保存离线玩家 {player} 的背包编辑"
+  save-enderchest-success: "§7[§b背包查看§7] §a已保存离线玩家 {player} 的末影箱编辑"
+  save-inventory-failed: "§7[§b背包查看§7] §e保存离线玩家 {player} 背包失败，使用缓存: {error}"
+  save-enderchest-failed: "§7[§b背包查看§7] §e保存离线玩家 {player} 末影箱失败，使用缓存: {error}"
+  sync-inventory-success: "§7[§b背包查看§7] §a已同步玩家 {player} 的离线背包编辑"
+  sync-enderchest-success: "§7[§b背包查看§7] §a已同步玩家 {player} 的离线末影箱编辑"
+  sync-inventory-slot-failed: "§7[§b背包查看§7] §c同步背包槽位 {slot} 失败: {error}"
+  sync-enderchest-slot-failed: "§7[§b背包查看§7] §c同步末影箱槽位 {slot} 失败: {error}"
+
+# ========================================
+# GUI 消息
+# ========================================
+gui:
+  online-inventory-title: "§2§l{player}背包"
+  offline-inventory-title: "§8{player}背包"
+  online-enderchest-title: "§5§l{player}末影箱"
+  offline-enderchest-title: "§8{player}末影箱"
+  history-inventory-title: "§a§l{player}历史背包"
+  history-enderchest-title: "§a§l{player}历史末影箱"
+  no-edit-permission: "§7[§b背包查看§7] §c你没有权限编辑背包"
+  target-offline: "§7[§b背包查看§7] §a{player}已经下线，准备打开其离线背包"
+  target-offline-end: "§7[§b背包查看§7] §a{player}已经下线，准备打开其离线末影箱"
+  editing-kick: "§c管理员正在编辑你的物品，请稍后进入"
+  # 占位符相关
+  placeholder-name: "§6§l占位符"
+  placeholder-lore:
+    - "§7此处没有对应的背包位置"
+    - "§c请勿尝试在此放置物品"
+  placeholder-click-blocked: "§7[§b背包查看§7] §c此槽位为占位符，无法放置物品"
+
+# ========================================
+# 命令消息
+# ========================================
+command:
+  no-permission: "§7[§b背包查看§7] §c你没有权限使用此命令"
+  console-only: "§7[§b背包查看§7] §c控制台无法使用此插件命令"
+  reload-success: "§7[§b背包查看§7] §a配置已成功重载"
+  reload-failed: "§7[§b背包查看§7] §c重载失败：§7{error}"
+  player-not-found: "§7[§b背包查看§7] §c玩家 §f{player} §c未找到或未在线"
+  cannot-open-self: "§7[§b背包查看§7] §c不能打开自己的背包！"
+  empty-hand: "§7[§b背包查看§7] §c手上物品不能为空！"
+  invalid-page: "§7[§b背包查看§7] §c请输入大于0的数字"
+  invalid-page-number: "§7[§b背包查看§7] §c没有这么多页！"
+  invalid-index: "§7[§b背包查看§7] §c请输入有效的索引"
+  no-snapshots: "§7[§b背包查看§7] §c此玩家没有记录，请等待服务器记录！"
+  snapshot-not-found: "§7[§b背包查看§7] §c未找到此快照记录"
+  snapshot-open-failed: "§7[§b背包查看§7] §c打开快照失败，数据可能已损坏"
+  manual-save-success: "§7[§b背包查看§7] §a已手动保存你的背包快照"
+
+  # 命令用法
+  inv-usage: "§7[§b背包查看§7] §a用法: /inv <玩家名>"
+  timeinv-usage: "§7[§b背包查看§7] §a用法: /seek timeinv <玩家名> [页数]"
+  timeend-usage: "§7[§b背包查看§7] §a用法: /seek timeend <玩家名> [页数]"
+  openinv-usage: "§7[§b背包查看§7] §a用法: /seek openinv <玩家名> <索引>"
+  openend-usage: "§7[§b背包查看§7] §a用法: /seek openend <玩家名> <索引>"
+
+  # 搜索消息
+  searching: "§7[§b背包查看§7] §a正在查找..."
+  search-complete: "§7[§b背包查看§7] §a查找完毕"
+  found-online-inv: "§7[§b背包查看§7] §a在线玩家{player}背包拥有此物品"
+  found-online-end: "§7[§b背包查看§7] §a在线玩家{player}末影箱拥有此物品"
+  found-offline-inv: "§7[§b背包查看§7] §7离线玩家{player}背包拥有此物品"
+  found-offline-end: "§7[§b背包查看§7] §7离线玩家{player}末影箱拥有此物品"
+
+  # 删除消息
+  deleting: "§7[§b背包查看§7] §a正在删除..."
+  delete-complete: "§7[§b背包查看§7] §a删除完毕"
+  deleted-online-inv: "§7[§b背包查看§7] §a在线玩家{player}背包拥有此物品，已删除"
+  deleted-online-end: "§7[§b背包查看§7] §a在线玩家{player}末影箱拥有此物品，已删除"
+  deleted-offline-inv: "§7[§b背包查看§7] §7离线玩家{player}背包拥有此物品，已删除"
+  deleted-offline-end: "§7[§b背包查看§7] §7离线玩家{player}末影箱拥有此物品，已删除"
+
+  # 快照列表
+  snapshot-header: "§6§l========== §b{player}的{type}快照 §f[第{page}页/共{total}页] §6§l=========="
+  snapshot-item: " §f- §2第{number}条记录 记录于{time} §7§l点击打开"
+  snapshot-hover: "点击打开"
+
+  # 帮助消息
+  help:
+    - "§7[§b背包查看§7] §7命令列表"
+    - "  §b/seek inv <玩家> §7- §f打开此玩家的背包"
+    - "  §b/seek end [玩家] §7- §f打开此玩家的末影箱（留空打开自己的）"
+    - "  §b/seek check §7- §f查找拥有手上物品的玩家（精确匹配）"
+    - "  §b/seek checkid §7- §f查找拥有手上物品的玩家（只匹配材质）"
+    - "  §b/seek delete §7- §f删除所有玩家拥有的手上物品"
+    - "  §b/seek timeinv <玩家> [页数] §7- §f查看此玩家背包备份信息"
+    - "  §b/seek timeend <玩家> [页数] §7- §f查看此玩家末影箱备份信息"
+    - "  §b/seek save §7- §f手动保存你的背包快照"
+    - "  §b/seek reload §7- §f重载配置文件"
+    - "§7快捷命令: §b/inv <玩家> §7- §f快速打开玩家背包"
+
+# ========================================
+# 错误消息
+# ========================================
+error:
+  config-load-failed: "§7[§b背包查看§7] §c配置加载失败，使用空配置"
+  missing-message: "§c[Missing: {path}]"
+  missing-message-list: "§c[Missing: {path}]"
