@@ -1,0 +1,176 @@
+# en_us.yml
+# SeekInventory English Language File
+
+# ========================================
+# Console Messages
+# ========================================
+console:
+  warning-prefix: "§e[WARNING] §7"
+  error-prefix: "§c[ERROR] §7"
+  database-init-success: "§7[§bSeekInventory§7] §aDatabase initialized successfully"
+  database-init-failed: "§7[§bSeekInventory§7] §cDatabase initialization failed: {error}"
+  database-table-created: "§7[§bSeekInventory§7] §7Database table structure created/verified"
+  database-table-create-failed: "§7[§bSeekInventory§7] §cFailed to create database tables: {error}"
+  database-closed: "§7[§bSeekInventory§7] §7Database connection pool closed"
+  auto-save-disabled: "§7[§bSeekInventory§7] §7Auto-save disabled"
+  auto-save-started: "§7[§bSeekInventory§7] §aAuto-save task started (interval: {interval} minutes)"
+  language-detected: "§7[§bSeekInventory§7] §7Auto-detected system language: §e{language}"
+  language-files-generated: "§a[SeekInventory] Auto-generated language files: §e{files}"
+  language-load-failed: "§e[SeekInventory] Failed to load language file '{language}', using default language"
+  language-default-failed: "§e[SeekInventory] Failed to load default language backup: {error}"
+  language-file-skip: "§e[SeekInventory] Language file {file} not in jar, skipping"
+  config-version-changed: "§e[SeekInventory] Major version change ({old} → {new}), overwriting config files"
+  config-updated: "§a[SeekInventory] Config files updated to new version"
+  config-version-parse-failed: "§e[SeekInventory] Unable to parse version number: {version}"
+
+# ========================================
+# Configuration Messages
+# ========================================
+config:
+  invalid-value-reset: "§7[§bSeekInventory§7] §e{field} cannot be less than 1, reset to {value}"
+
+# ========================================
+# Database Messages
+# ========================================
+database:
+  connection-not-initialized: "Database connection pool not initialized"
+
+# ========================================
+# Plugin Messages
+# ========================================
+plugin:
+  enabled: "§7[§bSeekInventory§7] §aPlugin enabled"
+  disabled: "§7[§bSeekInventory§7] §7Plugin disabled"
+
+# ========================================
+# Snapshot Messages
+# ========================================
+snapshot:
+  auto-save-complete: "§7[§bSeekInventory§7] §aAuto-saved all online player inventories"
+  save-success: "§7[§bSeekInventory§7] §aSaved snapshots for {count} online players"
+  batch-save-complete: "§7[§bSeekInventory§7] §aBatch save complete, {count} players succeeded (total time: {time}ms)"
+  save-player-success: "§7[§bSeekInventory§7] §7Saved player {player} snapshot (time: {time}ms)"
+  save-player-failed: "§7[§bSeekInventory§7] §cFailed to save player {player} snapshot: {error}"
+  save-failed: "§7[§bSeekInventory§7] §cFailed to save snapshot: {error}"
+  clean-old-failed: "§7[§bSeekInventory§7] §cFailed to clean old snapshots: {error}"
+  clean-success: "§7[§bSeekInventory§7] §aCleaned {count} old snapshot records"
+  get-list-failed: "§7[§bSeekInventory§7] §cFailed to get snapshot list: {error}"
+  get-snapshot-failed: "§7[§bSeekInventory§7] §cFailed to get snapshot: {error}"
+  get-count-failed: "§7[§bSeekInventory§7] §cFailed to get snapshot count: {error}"
+  cache-cleared: "§7[§bSeekInventory§7] §aAll cache cleared"
+  type-inventory: "Inventory"
+  type-enderchest: "Ender Chest"
+
+  # Pagination buttons
+  button-prev: "§6§l◀ §ePrevious"
+  button-prev-disabled: "§7§l◀ Previous"
+  button-separator: "  "
+  button-next: "§6§lNext §e▶"
+  button-next-disabled: "§7§lNext ▶"
+  hover-prev: "§eClick to view previous page"
+  hover-next: "§eClick to view next page"
+
+# ========================================
+# Offline Player Sync Messages
+# ========================================
+offline:
+  load-inventory-failed: "§7[§bSeekInventory§7] §cFailed to load offline player {player} inventory: {error}"
+  load-enderchest-failed: "§7[§bSeekInventory§7] §cFailed to load offline player {player} ender chest: {error}"
+  save-inventory-success: "§7[§bSeekInventory§7] §aSaved offline player {player} inventory edits"
+  save-enderchest-success: "§7[§bSeekInventory§7] §aSaved offline player {player} ender chest edits"
+  save-inventory-failed: "§7[§bSeekInventory§7] §eFailed to save offline player {player} inventory, using cache: {error}"
+  save-enderchest-failed: "§7[§bSeekInventory§7] §eFailed to save offline player {player} ender chest, using cache: {error}"
+  sync-inventory-success: "§7[§bSeekInventory§7] §aSynced player {player}'s offline inventory edits"
+  sync-enderchest-success: "§7[§bSeekInventory§7] §aSynced player {player}'s offline ender chest edits"
+  sync-inventory-slot-failed: "§7[§bSeekInventory§7] §cFailed to sync inventory slot {slot}: {error}"
+  sync-enderchest-slot-failed: "§7[§bSeekInventory§7] §cFailed to sync ender chest slot {slot}: {error}"
+
+# ========================================
+# GUI Messages
+# ========================================
+gui:
+  online-inventory-title: "§2§l{player}'s Inventory"
+  offline-inventory-title: "§8{player}'s Inventory"
+  online-enderchest-title: "§5§l{player}'s Ender Chest"
+  offline-enderchest-title: "§8{player}'s Ender Chest"
+  history-inventory-title: "§a§l{player}'s History Inventory"
+  history-enderchest-title: "§a§l{player}'s History Ender Chest"
+  no-edit-permission: "§7[§bSeekInventory§7] §cYou don't have permission to edit inventories"
+  target-offline: "§7[§bSeekInventory§7] §a{player} went offline, preparing to open offline inventory"
+  target-offline-end: "§7[§bSeekInventory§7] §a{player} went offline, preparing to open offline ender chest"
+  editing-kick: "§cAn administrator is editing your items, please try again later"
+  # Placeholder related
+  placeholder-name: "§6§lPlaceholder"
+  placeholder-lore:
+    - "§7No corresponding inventory slot here"
+    - "§cDo not attempt to place items here"
+  placeholder-click-blocked: "§7[§bSeekInventory§7] §cThis is a placeholder slot, cannot place items"
+
+# ========================================
+# Command Messages
+# ========================================
+command:
+  no-permission: "§7[§bSeekInventory§7] §cYou don't have permission to use this command"
+  console-only: "§7[§bSeekInventory§7] §cThis command cannot be used from console"
+  reload-success: "§7[§bSeekInventory§7] §aConfiguration reloaded successfully"
+  reload-failed: "§7[§bSeekInventory§7] §cReload failed: §7{error}"
+  player-not-found: "§7[§bSeekInventory§7] §cPlayer §f{player} §cnot found or offline"
+  cannot-open-self: "§7[§bSeekInventory§7] §cYou cannot open your own inventory!"
+  empty-hand: "§7[§bSeekInventory§7] §cYou must hold an item in your hand!"
+  invalid-page: "§7[§bSeekInventory§7] §cPlease enter a number greater than 0"
+  invalid-page-number: "§7[§bSeekInventory§7] §cInvalid page number!"
+  invalid-index: "§7[§bSeekInventory§7] §cPlease enter a valid index"
+  no-snapshots: "§7[§bSeekInventory§7] §cNo snapshots found for this player"
+  snapshot-not-found: "§7[§bSeekInventory§7] §cSnapshot not found"
+  snapshot-open-failed: "§7[§bSeekInventory§7] §cFailed to open snapshot, data may be corrupted"
+  manual-save-success: "§7[§bSeekInventory§7] §aManually saved your inventory snapshot"
+
+  # Command Usage
+  inv-usage: "§7[§bSeekInventory§7] §aUsage: /inv <player>"
+  timeinv-usage: "§7[§bSeekInventory§7] §aUsage: /seek timeinv <player> [page]"
+  timeend-usage: "§7[§bSeekInventory§7] §aUsage: /seek timeend <player> [page]"
+  openinv-usage: "§7[§bSeekInventory§7] §aUsage: /seek openinv <player> <index>"
+  openend-usage: "§7[§bSeekInventory§7] §aUsage: /seek openend <player> <index>"
+
+  # Search Messages
+  searching: "§7[§bSeekInventory§7] §aSearching..."
+  search-complete: "§7[§bSeekInventory§7] §aSearch complete"
+  found-online-inv: "§7[§bSeekInventory§7] §aOnline player {player} has this item in inventory"
+  found-online-end: "§7[§bSeekInventory§7] §aOnline player {player} has this item in ender chest"
+  found-offline-inv: "§7[§bSeekInventory§7] §7Offline player {player} has this item in inventory"
+  found-offline-end: "§7[§bSeekInventory§7] §7Offline player {player} has this item in ender chest"
+
+  # Delete Messages
+  deleting: "§7[§bSeekInventory§7] §aDeleting..."
+  delete-complete: "§7[§bSeekInventory§7] §aDeletion complete"
+  deleted-online-inv: "§7[§bSeekInventory§7] §aDeleted from online player {player}'s inventory"
+  deleted-online-end: "§7[§bSeekInventory§7] §aDeleted from online player {player}'s ender chest"
+  deleted-offline-inv: "§7[§bSeekInventory§7] §7Deleted from offline player {player}'s inventory"
+  deleted-offline-end: "§7[§bSeekInventory§7] §7Deleted from offline player {player}'s ender chest"
+
+  # Snapshot List
+  snapshot-header: "§6§l========== §b{player}'s {type} Snapshots §f[Page {page}/{total}] §6§l=========="
+  snapshot-item: " §f- §2Snapshot #{number} recorded at {time} §7§lClick to open"
+  snapshot-hover: "Click to open"
+
+  # Help Messages
+  help:
+    - "§7[§bSeekInventory§7] §7Command list"
+    - "  §b/seek inv <player> §7- §fOpen player's inventory"
+    - "  §b/seek end [player] §7- §fOpen player's ender chest (leave empty for yourself)"
+    - "  §b/seek check §7- §fFind players with this item (exact match)"
+    - "  §b/seek checkid §7- §fFind players with this item (material only)"
+    - "  §b/seek delete §7- §fDelete this item from all players"
+    - "  §b/seek timeinv <player> [page] §7- §fView player's inventory history"
+    - "  §b/seek timeend <player> [page] §7- §fView player's ender chest history"
+    - "  §b/seek save §7- §fManually save your inventory snapshot"
+    - "  §b/seek reload §7- §fReload configuration"
+    - "§7Quick command: §b/inv <player> §7- §fQuickly open player inventory"
+
+# ========================================
+# Error Messages
+# ========================================
+error:
+  config-load-failed: "§7[§bSeekInventory§7] §cFailed to load config, using empty config"
+  missing-message: "§c[Missing: {path}]"
+  missing-message-list: "§c[Missing: {path}]"

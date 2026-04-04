@@ -1,0 +1,68 @@
+# ========================================
+# Configuration file version - DO NOT MODIFY!
+# Config files will only be overwritten when the MAJOR version number (first digit) changes
+# Example: 3.x.x → 4.0.0 will overwrite, but 3.0.0 → 3.1.0 will not
+# ----------------------------------------
+# 配置文件版本号 - 请勿修改！
+# 只有当主版本号（第一个数字）发生变化时，插件才会自动覆盖所有配置文件
+# 例如：3.x.x → 4.0.0 会覆盖，但 3.0.0 → 3.1.0 不会覆盖
+# ========================================
+ConfigVersion: '1.0.0'
+
+# ========================================
+# Language Settings
+# 语言设置
+# ========================================
+
+# Available options:
+#   default  - Auto-detect system language (recommended)
+#   zh_cn    - Simplified Chinese
+#   en_us    - English
+# ----------------------------------------
+# 可选值:
+#   default  - 自动检测系统语言（推荐）
+#   zh_cn    - 简体中文
+#   en_us    - English
+Language: default
+
+# ========================================
+# Automatic Backup Settings
+# 自动备份设置
+# ========================================
+
+# Enable automatic periodic backup of online player inventories
+# Set to false to disable automatic backups (manual backups still available)
+# ----------------------------------------
+# 是否启用定时自动保存
+# 设置为 false 则禁用自动备份（仍可手动备份）
+auto-save: true
+
+# Backup interval in minutes
+# Recommended: 30-60 minutes for optimal performance
+# Minimum: 1 minute
+# ----------------------------------------
+# 保存间隔（分钟）
+# 推荐：30-60 分钟以获得最佳性能
+# 最小值：1 分钟
+save-interval: 30
+
+# Maximum number of backup snapshots to keep per player
+# Older snapshots will be automatically deleted
+# Recommended: 5-20 snapshots
+# ----------------------------------------
+# 每位玩家最多保存的快照数量
+# 旧快照会被自动删除
+# 推荐：5-20 个快照
+max-snapshots: 10
+
+# ========================================
+# Display Settings
+# 显示设置
+# ========================================
+
+# Number of snapshot records to display per page
+# Used in /seek timeinv and /seek timeend commands
+# ----------------------------------------
+# 每页显示的快照记录数
+# 用于 /seek timeinv 和 /seek timeend 命令
+page-size: 10
