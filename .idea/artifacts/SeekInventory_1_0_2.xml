@@ -3,9 +3,9 @@
     <output-path>$PROJECT_DIR$/..</output-path>
     <root id="archive" name="SeekInventory-1.0.2.jar">
       <element id="module-output" name="SeekInventory" />
-      <element id="file-copy" path="$PROJECT_DIR$/config.yml" />
-      <element id="file-copy" path="$PROJECT_DIR$/data.yml" />
-      <element id="file-copy" path="$PROJECT_DIR$/plugin.yml" />
+      <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/config.yml" />
+      <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/data.yml" />
+      <element id="file-copy" path="$PROJECT_DIR$/src/main/resources/plugin.yml" />
     </root>
   </artifact>
 </component>

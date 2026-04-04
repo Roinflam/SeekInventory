@@ -1,0 +1,25 @@
+name: SeekInventory
+main: com.flameforge.seekinventory.SeekInventory
+version: '1.0.0'
+author: Roinflam
+description: 查看和管理玩家背包/末影箱，支持历史快照（SQLite版）
+depend: [ YukiNoaAPI ]
+api-version: 1.13
+commands:
+  SeekInventory:
+    description: 插件主命令
+    usage: /SeekInventory <help|inv|end|check|checkid|delete|timeinv|timeend|save|reload>
+    aliases: [ seek ]
+  Inv:
+    description: 快速打开玩家背包
+    usage: /Inv <玩家名>
+permissions:
+  si.open:
+    description: 打开玩家背包/末影箱
+    default: op
+  si.edit:
+    description: 编辑玩家背包/末影箱
+    default: op
+  si.check:
+    description: 查找物品
+    default: op
