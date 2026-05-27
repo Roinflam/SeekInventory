@@ -14,6 +14,7 @@ console:
   database-closed: "§7[§b背包查看§7] §7数据库连接池已关闭"
   auto-save-disabled: "§7[§b背包查看§7] §7自动保存已禁用"
   auto-save-started: "§7[§b背包查看§7] §a定时保存任务已启动（间隔: {interval}分钟）"
+  curios-detected: "§7[§b背包查看§7] §a检测到 Curios 饰品模组，已启用饰品栏备份功能"
   language-detected: "§7[§b背包查看§7] §7自动检测系统语言: §e{language}"
   language-files-generated: "§a[SeekInventory] 自动生成语言文件: §e{files}"
   language-load-failed: "§e[SeekInventory] 加载语言文件 '{language}' 失败，使用默认语言"
@@ -54,12 +55,17 @@ snapshot:
   save-failed: "§7[§b背包查看§7] §c保存快照失败: {error}"
   clean-old-failed: "§7[§b背包查看§7] §c清理旧快照失败: {error}"
   clean-success: "§7[§b背包查看§7] §a已清理 {count} 条旧快照记录"
+  clean-expired-success: "§7[§b背包查看§7] §a已清理 {count} 条超过 {days} 天的过期快照"
+  clean-expired-failed: "§7[§b背包查看§7] §c清理过期快照失败: {error}"
   get-list-failed: "§7[§b背包查看§7] §c获取快照列表失败: {error}"
   get-snapshot-failed: "§7[§b背包查看§7] §c获取快照失败: {error}"
   get-count-failed: "§7[§b背包查看§7] §c获取快照数量失败: {error}"
   cache-cleared: "§7[§b背包查看§7] §a已清除所有缓存"
   type-inventory: "背包"
   type-enderchest: "末影箱"
+  type-curios: "饰品栏"
+  curios-overflow: "§7[§b背包查看§7] §e玩家 {player} 饰品数量超过54个，仅保存前54个"
+  curios-save-failed: "§7[§b背包查看§7] §e保存玩家 {player} 饰品栏快照失败: {error}"
 
   # 翻页按钮
   button-prev: "§6§l◀ §e上一页"
@@ -95,6 +101,7 @@ gui:
   offline-enderchest-title: "§8{player}末影箱"
   history-inventory-title: "§a§l{player}历史背包"
   history-enderchest-title: "§a§l{player}历史末影箱"
+  history-curios-title: "§d§l{player}历史饰品栏"
   no-edit-permission: "§7[§b背包查看§7] §c你没有权限编辑背包"
   target-offline: "§7[§b背包查看§7] §a{player}已经下线，准备打开其离线背包"
   target-offline-end: "§7[§b背包查看§7] §a{player}已经下线，准备打开其离线末影箱"
@@ -105,6 +112,25 @@ gui:
     - "§7此处没有对应的背包位置"
     - "§c请勿尝试在此放置物品"
   placeholder-click-blocked: "§7[§b背包查看§7] §c此槽位为占位符，无法放置物品"
+  # 饰品栏历史翻页 GUI
+  curios-prev-page: "§a§l◀ 上一页"
+  curios-no-prev: "§7§l◀ 已是第一页"
+  curios-next-page: "§a§l下一页 ▶"
+  curios-no-next: "§7§l▶ 已是最后一页"
+  curios-page-info: "§e第 {page}/{total} 页 §7（共 {count} 件饰品）"
+  curios-filler-name: "§6§l饰品栏快照"
+  curios-filler-lore:
+    - "§7可直接拿取物品"
+    - "§7用于恢复玩家丢失的饰品"
+  curios-prev-lore:
+    - "§7点击查看上一页饰品"
+  curios-next-lore:
+    - "§7点击查看下一页饰品"
+  curios-disabled-lore:
+    - "§7此方向没有更多页了"
+  curios-page-lore:
+    - "§7当前查看第 {page} 页，共 {total} 页"
+    - "§7快照中共有 {count} 件饰品"
 
 # ========================================
 # 命令消息
@@ -124,13 +150,17 @@ command:
   snapshot-not-found: "§7[§b背包查看§7] §c未找到此快照记录"
   snapshot-open-failed: "§7[§b背包查看§7] §c打开快照失败，数据可能已损坏"
   manual-save-success: "§7[§b背包查看§7] §a已手动保存你的背包快照"
+  curios-not-available: "§7[§b背包查看§7] §c服务器未安装 Curios 饰品模组，无法使用此功能"
+  curios-snapshot-empty: "§7[§b背包查看§7] §c该快照中没有饰品物品"
 
   # 命令用法
   inv-usage: "§7[§b背包查看§7] §a用法: /inv <玩家名>"
   timeinv-usage: "§7[§b背包查看§7] §a用法: /seek timeinv <玩家名> [页数]"
   timeend-usage: "§7[§b背包查看§7] §a用法: /seek timeend <玩家名> [页数]"
+  timecurios-usage: "§7[§b背包查看§7] §a用法: /seek timecurios <玩家名> [页数]"
   openinv-usage: "§7[§b背包查看§7] §a用法: /seek openinv <玩家名> <索引>"
   openend-usage: "§7[§b背包查看§7] §a用法: /seek openend <玩家名> <索引>"
+  opencurios-usage: "§7[§b背包查看§7] §a用法: /seek opencurios <玩家名> <索引>"
 
   # 搜索消息
   searching: "§7[§b背包查看§7] §a正在查找..."
@@ -166,6 +196,9 @@ command:
     - "  §b/seek save §7- §f手动保存你的背包快照"
     - "  §b/seek reload §7- §f重载配置文件"
     - "§7快捷命令: §b/inv <玩家> §7- §f快速打开玩家背包"
+  help-curios:
+    - "§7[§b背包查看§7] §d饰品栏命令（Curios）"
+    - "  §b/seek timecurios <玩家> [页数] §7- §f查看此玩家饰品栏备份信息"
 
 # ========================================
 # 错误消息

@@ -33,6 +33,9 @@ public class ConfigManager {
     /** 每页显示的记录数 */
     private int pageSize;
 
+    /** 自动清理天数（超过此天数的快照将被自动清理） */
+    private int autoCleanDays;
+
     /**
      * 构造函数
      *
@@ -60,6 +63,7 @@ public class ConfigManager {
         this.saveInterval = config.getInt("save-interval", 30);
         this.maxSnapshots = config.getInt("max-snapshots", 10);
         this.pageSize = config.getInt("page-size", 10);
+        this.autoCleanDays = config.getInt("auto-clean-days", 3);
 
         // 验证配置
         validateConfig();
@@ -73,6 +77,7 @@ public class ConfigManager {
         this.saveInterval = 30;
         this.maxSnapshots = 10;
         this.pageSize = 10;
+        this.autoCleanDays = 3;
     }
 
     /**
@@ -102,6 +107,14 @@ public class ConfigManager {
             plugin.sendWarning(plugin.getLanguageManager().getMessage("config.invalid-value-reset", placeholders));
             pageSize = 10;
         }
+
+        if (autoCleanDays < 1) {
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("field", "auto-clean-days");
+            placeholders.put("value", "3");
+            plugin.sendWarning(plugin.getLanguageManager().getMessage("config.invalid-value-reset", placeholders));
+            autoCleanDays = 3;
+        }
     }
 
     // Getter 方法
@@ -120,6 +133,15 @@ public class ConfigManager {
 
     public int getPageSize() {
         return pageSize;
+    }
+
+    /**
+     * 获取自动清理天数
+     *
+     * @return 自动清理天数
+     */
+    public int getAutoCleanDays() {
+        return autoCleanDays;
     }
 
     public YamlConfiguration getConfig() {

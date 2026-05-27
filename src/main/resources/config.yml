@@ -55,6 +55,17 @@ save-interval: 30
 # 推荐：5-20 个快照
 max-snapshots: 10
 
+# Automatically delete snapshots older than this many days
+# Snapshots created before (current time - auto-clean-days) will be permanently removed
+# This runs hourly alongside the max-snapshots cleanup
+# Minimum: 1 day
+# ----------------------------------------
+# 自动清理超过指定天数的快照
+# 超过此天数的快照将被永久删除
+# 每小时与数量清理一起执行
+# 最小值：1 天
+auto-clean-days: 3
+
 # ========================================
 # Display Settings
 # 显示设置

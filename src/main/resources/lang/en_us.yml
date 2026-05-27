@@ -14,6 +14,7 @@ console:
   database-closed: "§7[§bSeekInventory§7] §7Database connection pool closed"
   auto-save-disabled: "§7[§bSeekInventory§7] §7Auto-save disabled"
   auto-save-started: "§7[§bSeekInventory§7] §aAuto-save task started (interval: {interval} minutes)"
+  curios-detected: "§7[§bSeekInventory§7] §aCurios mod detected, curio slot backup enabled"
   language-detected: "§7[§bSeekInventory§7] §7Auto-detected system language: §e{language}"
   language-files-generated: "§a[SeekInventory] Auto-generated language files: §e{files}"
   language-load-failed: "§e[SeekInventory] Failed to load language file '{language}', using default language"
@@ -54,12 +55,17 @@ snapshot:
   save-failed: "§7[§bSeekInventory§7] §cFailed to save snapshot: {error}"
   clean-old-failed: "§7[§bSeekInventory§7] §cFailed to clean old snapshots: {error}"
   clean-success: "§7[§bSeekInventory§7] §aCleaned {count} old snapshot records"
+  clean-expired-success: "§7[§bSeekInventory§7] §aCleaned {count} expired snapshots older than {days} days"
+  clean-expired-failed: "§7[§bSeekInventory§7] §cFailed to clean expired snapshots: {error}"
   get-list-failed: "§7[§bSeekInventory§7] §cFailed to get snapshot list: {error}"
   get-snapshot-failed: "§7[§bSeekInventory§7] §cFailed to get snapshot: {error}"
   get-count-failed: "§7[§bSeekInventory§7] §cFailed to get snapshot count: {error}"
   cache-cleared: "§7[§bSeekInventory§7] §aAll cache cleared"
   type-inventory: "Inventory"
   type-enderchest: "Ender Chest"
+  type-curios: "Curio Slots"
+  curios-overflow: "§7[§bSeekInventory§7] §ePlayer {player} has more than 54 curio items, only first 54 saved"
+  curios-save-failed: "§7[§bSeekInventory§7] §eFailed to save player {player} curio snapshot: {error}"
 
   # Pagination buttons
   button-prev: "§6§l◀ §ePrevious"
@@ -95,6 +101,7 @@ gui:
   offline-enderchest-title: "§8{player}'s Ender Chest"
   history-inventory-title: "§a§l{player}'s History Inventory"
   history-enderchest-title: "§a§l{player}'s History Ender Chest"
+  history-curios-title: "§d§l{player}'s History Curios"
   no-edit-permission: "§7[§bSeekInventory§7] §cYou don't have permission to edit inventories"
   target-offline: "§7[§bSeekInventory§7] §a{player} went offline, preparing to open offline inventory"
   target-offline-end: "§7[§bSeekInventory§7] §a{player} went offline, preparing to open offline ender chest"
@@ -105,6 +112,25 @@ gui:
     - "§7No corresponding inventory slot here"
     - "§cDo not attempt to place items here"
   placeholder-click-blocked: "§7[§bSeekInventory§7] §cThis is a placeholder slot, cannot place items"
+  # Curios history pagination GUI
+  curios-prev-page: "§a§l◀ Previous Page"
+  curios-no-prev: "§7§l◀ First Page"
+  curios-next-page: "§a§lNext Page ▶"
+  curios-no-next: "§7§l▶ Last Page"
+  curios-page-info: "§ePage {page}/{total} §7({count} curio items)"
+  curios-filler-name: "§6§lCurio Snapshot"
+  curios-filler-lore:
+    - "§7You can take items directly"
+    - "§7to recover player curios"
+  curios-prev-lore:
+    - "§7Click to view previous page"
+  curios-next-lore:
+    - "§7Click to view next page"
+  curios-disabled-lore:
+    - "§7No more pages in this direction"
+  curios-page-lore:
+    - "§7Viewing page {page} of {total}"
+    - "§7{count} curio items in total"
 
 # ========================================
 # Command Messages
@@ -124,13 +150,17 @@ command:
   snapshot-not-found: "§7[§bSeekInventory§7] §cSnapshot not found"
   snapshot-open-failed: "§7[§bSeekInventory§7] §cFailed to open snapshot, data may be corrupted"
   manual-save-success: "§7[§bSeekInventory§7] §aManually saved your inventory snapshot"
+  curios-not-available: "§7[§bSeekInventory§7] §cCurios mod is not installed on this server"
+  curios-snapshot-empty: "§7[§bSeekInventory§7] §cNo curio items found in this snapshot"
 
   # Command Usage
   inv-usage: "§7[§bSeekInventory§7] §aUsage: /inv <player>"
   timeinv-usage: "§7[§bSeekInventory§7] §aUsage: /seek timeinv <player> [page]"
   timeend-usage: "§7[§bSeekInventory§7] §aUsage: /seek timeend <player> [page]"
+  timecurios-usage: "§7[§bSeekInventory§7] §aUsage: /seek timecurios <player> [page]"
   openinv-usage: "§7[§bSeekInventory§7] §aUsage: /seek openinv <player> <index>"
   openend-usage: "§7[§bSeekInventory§7] §aUsage: /seek openend <player> <index>"
+  opencurios-usage: "§7[§bSeekInventory§7] §aUsage: /seek opencurios <player> <index>"
 
   # Search Messages
   searching: "§7[§bSeekInventory§7] §aSearching..."
@@ -166,6 +196,9 @@ command:
     - "  §b/seek save §7- §fManually save your inventory snapshot"
     - "  §b/seek reload §7- §fReload configuration"
     - "§7Quick command: §b/inv <player> §7- §fQuickly open player inventory"
+  help-curios:
+    - "§7[§bSeekInventory§7] §dCurios Commands"
+    - "  §b/seek timecurios <player> [page] §7- §fView player's curio slot history"
 
 # ========================================
 # Error Messages

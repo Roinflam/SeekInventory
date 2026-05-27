@@ -1,6 +1,8 @@
 package com.flameforge.seekinventory.command;
 
 import com.flameforge.seekinventory.SeekInventory;
+import com.flameforge.seekinventory.curios.CuriosSupport;
+import com.flameforge.seekinventory.gui.CuriosHistoryInterface;
 import com.flameforge.seekinventory.gui.OfflineEndInterface;
 import com.flameforge.seekinventory.gui.OfflineInterface;
 import com.flameforge.seekinventory.gui.OnlineEndInterface;
@@ -72,9 +74,23 @@ public class Commands implements CommandExecutor {
      * 处理命令
      */
     private void handleCommand(CommandSender sender, String[] args) {
+        // 控制台仅允许 help 和 reload 命令
         if (sender instanceof ConsoleCommandSender) {
-            sender.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.console-only")));
-            return;
+            if (args.length == 0) {
+                sendHelp(sender);
+                return;
+            }
+            switch (args[0].toLowerCase()) {
+                case "help":
+                    sendHelp(sender);
+                    return;
+                case "reload":
+                    handleReload(sender);
+                    return;
+                default:
+                    sender.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.console-only")));
+                    return;
+            }
         }
 
         Player player = (Player) sender;
@@ -121,12 +137,20 @@ public class Commands implements CommandExecutor {
                 handleTimeEnd(player, args);
                 break;
 
+            case "timecurios":
+                handleTimeCurios(player, args);
+                break;
+
             case "openinv":
                 handleOpenInv(player, args);
                 break;
 
             case "openend":
                 handleOpenEnd(player, args);
+                break;
+
+            case "opencurios":
+                handleOpenCurios(player, args);
                 break;
 
             case "save":
@@ -145,6 +169,12 @@ public class Commands implements CommandExecutor {
     private void sendHelp(CommandSender sender) {
         List<String> helpMessages = plugin.getLanguageManager().getMessageList("command.help");
         helpMessages.forEach(msg -> sender.sendMessage(IString.color(msg)));
+
+        // 如果 Curios 可用，额外显示饰品栏相关帮助
+        if (CuriosSupport.isAvailable()) {
+            List<String> curiosHelp = plugin.getLanguageManager().getMessageList("command.help-curios");
+            curiosHelp.forEach(msg -> sender.sendMessage(IString.color(msg)));
+        }
     }
 
     /**
@@ -179,7 +209,6 @@ public class Commands implements CommandExecutor {
         }
 
         if (args.length == 1) {
-            // 打开自己的末影箱
             OnlineEndInterface onlineEndInterface = new OnlineEndInterface(player, player, plugin);
             IInventory.openInventory(onlineEndInterface, player);
             return;
@@ -247,7 +276,6 @@ public class Commands implements CommandExecutor {
         ItemStack itemStack = player.getInventory().getItemInHand();
         player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.searching")));
 
-        // 搜索在线玩家
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (IInventoryItem.hasAmount(p.getInventory(), itemStack) > 0) {
                 player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.found-online-inv", "player", p.getName())));
@@ -259,7 +287,6 @@ public class Commands implements CommandExecutor {
             }
         }
 
-        // 搜索离线玩家
         for (OfflinePlayer p : IPlayer.getOfflinePlayers()) {
             searchOfflinePlayer(player, p, itemStack, true);
         }
@@ -284,7 +311,6 @@ public class Commands implements CommandExecutor {
         ItemStack itemStack = player.getInventory().getItemInHand();
         player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.searching")));
 
-        // 搜索在线玩家
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (IInventoryItem.hasAmount(p.getInventory(), itemStack) > 0) {
                 player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.found-online-inv", "player", p.getName())));
@@ -296,7 +322,6 @@ public class Commands implements CommandExecutor {
             }
         }
 
-        // 搜索离线玩家
         for (OfflinePlayer p : IPlayer.getOfflinePlayers()) {
             searchOfflinePlayer(player, p, itemStack, false);
         }
@@ -306,11 +331,6 @@ public class Commands implements CommandExecutor {
 
     /**
      * 搜索离线玩家
-     *
-     * @param player 执行命令的玩家
-     * @param offlinePlayer 离线玩家
-     * @param itemStack 要搜索的物品
-     * @param exactMatch 是否精确匹配
      */
     private void searchOfflinePlayer(Player player, OfflinePlayer offlinePlayer, ItemStack itemStack, boolean exactMatch) {
         File playerDataFolder = new File(plugin.getDataFolder().getParentFile().getParentFile(), "world/playerdata/");
@@ -319,7 +339,6 @@ public class Commands implements CommandExecutor {
         try {
             NBTFile nbtFile = new NBTFile(playerData);
 
-            // 搜索背包
             for (NBTCompound nbtCompound : nbtFile.getCompoundList("Inventory")) {
                 ItemStack foundItem = NBTItem.convertNBTtoItem(nbtCompound);
                 boolean matches = exactMatch ? foundItem.isSimilar(itemStack) : foundItem.getType().equals(itemStack.getType());
@@ -329,7 +348,6 @@ public class Commands implements CommandExecutor {
                 }
             }
 
-            // 搜索末影箱
             for (NBTCompound nbtCompound : nbtFile.getCompoundList("EnderItems")) {
                 ItemStack foundItem = NBTItem.convertNBTtoItem(nbtCompound);
                 boolean matches = exactMatch ? foundItem.isSimilar(itemStack) : foundItem.getType().equals(itemStack.getType());
@@ -359,7 +377,6 @@ public class Commands implements CommandExecutor {
         ItemStack itemStack = player.getInventory().getItemInHand();
         player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleting")));
 
-        // 删除在线玩家物品
         for (Player p : Bukkit.getOnlinePlayers()) {
             if (IInventoryItem.hasAmount(p.getInventory(), itemStack) > 0) {
                 p.getInventory().remove(itemStack);
@@ -373,7 +390,6 @@ public class Commands implements CommandExecutor {
             }
         }
 
-        // 删除离线玩家物品
         for (OfflinePlayer p : IPlayer.getOfflinePlayers()) {
             deleteOfflinePlayerItem(player, p, itemStack);
         }
@@ -393,7 +409,6 @@ public class Commands implements CommandExecutor {
             NBTCompoundList invList = nbtFile.getCompoundList("Inventory");
             NBTCompoundList endList = nbtFile.getCompoundList("EnderItems");
 
-            // 删除背包中的物品
             for (NBTListCompound nbtListCompound : new ArrayList<>(nbtFile.getCompoundList("Inventory"))) {
                 if (NBTItem.convertNBTtoItem(nbtListCompound).isSimilar(itemStack)) {
                     invList.remove(nbtListCompound);
@@ -402,7 +417,6 @@ public class Commands implements CommandExecutor {
                 }
             }
 
-            // 删除末影箱中的物品
             for (NBTListCompound nbtListCompound : new ArrayList<>(nbtFile.getCompoundList("EnderItems"))) {
                 if (NBTItem.convertNBTtoItem(nbtListCompound).isSimilar(itemStack)) {
                     endList.remove(nbtListCompound);
@@ -431,17 +445,8 @@ public class Commands implements CommandExecutor {
         }
 
         String targetName = args[1];
-        int page = 1;
-
-        if (args.length >= 3) {
-            try {
-                page = Integer.parseInt(args[2]);
-                if (page < 1) throw new NumberFormatException();
-            } catch (NumberFormatException e) {
-                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.invalid-page")));
-                return;
-            }
-        }
+        int page = parsePageArg(args, 2, player);
+        if (page < 0) return;
 
         displaySnapshotList(player, targetName, DataManager.TYPE_INVENTORY, page);
     }
@@ -461,19 +466,58 @@ public class Commands implements CommandExecutor {
         }
 
         String targetName = args[1];
-        int page = 1;
+        int page = parsePageArg(args, 2, player);
+        if (page < 0) return;
 
-        if (args.length >= 3) {
+        displaySnapshotList(player, targetName, DataManager.TYPE_ENDERCHEST, page);
+    }
+
+    /**
+     * 处理查看饰品栏历史命令
+     */
+    private void handleTimeCurios(Player player, String[] args) {
+        if (!player.isOp()) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.no-permission")));
+            return;
+        }
+
+        if (!CuriosSupport.isAvailable()) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.curios-not-available")));
+            return;
+        }
+
+        if (args.length < 2) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.timecurios-usage")));
+            return;
+        }
+
+        String targetName = args[1];
+        int page = parsePageArg(args, 2, player);
+        if (page < 0) return;
+
+        displaySnapshotList(player, targetName, DataManager.TYPE_CURIOS, page);
+    }
+
+    /**
+     * 解析页码参数
+     *
+     * @param args     命令参数
+     * @param argIndex 页码参数的索引位置
+     * @param player   玩家（用于发送错误消息）
+     * @return 页码（从 1 开始），解析失败返回 -1
+     */
+    private int parsePageArg(String[] args, int argIndex, Player player) {
+        int page = 1;
+        if (args.length > argIndex) {
             try {
-                page = Integer.parseInt(args[2]);
+                page = Integer.parseInt(args[argIndex]);
                 if (page < 1) throw new NumberFormatException();
             } catch (NumberFormatException e) {
                 player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.invalid-page")));
-                return;
+                return -1;
             }
         }
-
-        displaySnapshotList(player, targetName, DataManager.TYPE_ENDERCHEST, page);
+        return page;
     }
 
     /**
@@ -495,10 +539,19 @@ public class Commands implements CommandExecutor {
             return;
         }
 
-        // 显示标题
-        String typeDisplay = type.equals(DataManager.TYPE_INVENTORY) ?
-                plugin.getLanguageManager().getMessage("snapshot.type-inventory") :
-                plugin.getLanguageManager().getMessage("snapshot.type-enderchest");
+        // 根据类型确定显示名和打开命令
+        String typeDisplay;
+        String commandType;
+        if (type.equals(DataManager.TYPE_INVENTORY)) {
+            typeDisplay = plugin.getLanguageManager().getMessage("snapshot.type-inventory");
+            commandType = "openinv";
+        } else if (type.equals(DataManager.TYPE_ENDERCHEST)) {
+            typeDisplay = plugin.getLanguageManager().getMessage("snapshot.type-enderchest");
+            commandType = "openend";
+        } else {
+            typeDisplay = plugin.getLanguageManager().getMessage("snapshot.type-curios");
+            commandType = "opencurios";
+        }
 
         Map<String, String> headerPlaceholders = new HashMap<>();
         headerPlaceholders.put("player", playerName);
@@ -507,19 +560,16 @@ public class Commands implements CommandExecutor {
         headerPlaceholders.put("total", String.valueOf(totalPages));
         player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.snapshot-header", headerPlaceholders)));
 
-        // 转换为列表以支持分页
         List<Map.Entry<Long, String>> snapshotList = new ArrayList<>(snapshots.entrySet());
         int startIndex = (page - 1) * pageSize;
         int endIndex = Math.min(startIndex + pageSize, snapshotList.size());
 
-        // 显示当前页的快照
         for (int i = startIndex; i < endIndex; i++) {
             Map.Entry<Long, String> entry = snapshotList.get(i);
             long timestamp = entry.getKey();
             String timeStr = dateFormat.format(new Date(timestamp * 1000));
 
             int recordNumber = snapshotList.size() - i;
-            String commandType = type.equals(DataManager.TYPE_INVENTORY) ? "openinv" : "openend";
 
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("number", String.valueOf(recordNumber));
@@ -532,7 +582,6 @@ public class Commands implements CommandExecutor {
             IBungee.sendPartShowCommandMessage(player, message, hover, "§7§l「" + hover + "」", "§a" + hover, command, true);
         }
 
-        // 发送翻页按钮
         if (totalPages > 1) {
             sendPageButtons(player, playerName, type, page, totalPages);
         }
@@ -540,15 +589,17 @@ public class Commands implements CommandExecutor {
 
     /**
      * 发送翻页按钮
-     *
-     * @param player      玩家
-     * @param playerName  目标玩家名
-     * @param type        快照类型
-     * @param currentPage 当前页
-     * @param totalPages  总页数
      */
     private void sendPageButtons(Player player, String playerName, String type, int currentPage, int totalPages) {
-        String commandType = type.equals(DataManager.TYPE_INVENTORY) ? "timeinv" : "timeend";
+        // 根据类型确定命令前缀
+        String commandType;
+        if (type.equals(DataManager.TYPE_INVENTORY)) {
+            commandType = "timeinv";
+        } else if (type.equals(DataManager.TYPE_ENDERCHEST)) {
+            commandType = "timeend";
+        } else {
+            commandType = "timecurios";
+        }
 
         String leftButton = plugin.getLanguageManager().getMessage("snapshot.button-prev");
         String separator = plugin.getLanguageManager().getMessage("snapshot.button-separator");
@@ -557,10 +608,8 @@ public class Commands implements CommandExecutor {
         String leftHover = plugin.getLanguageManager().getMessage("snapshot.hover-prev");
         String rightHover = plugin.getLanguageManager().getMessage("snapshot.hover-next");
 
-        // 构建完整消息
         StringBuilder fullMessage = new StringBuilder();
 
-        // 左按钮（上一页）
         if (currentPage > 1) {
             fullMessage.append(leftButton);
         } else {
@@ -570,7 +619,6 @@ public class Commands implements CommandExecutor {
 
         fullMessage.append(separator);
 
-        // 右按钮（下一页）
         if (currentPage < totalPages) {
             fullMessage.append(rightButton);
         } else {
@@ -580,26 +628,21 @@ public class Commands implements CommandExecutor {
 
         String message = fullMessage.toString();
 
-        // 如果两个按钮都不可用，直接发送普通消息
         if (currentPage == 1 && currentPage == totalPages) {
             player.sendMessage(IString.color(message));
             return;
         }
 
-        // 使用临时消息来构建点击效果
         String tempMessage = message;
 
-        // 先处理左按钮
         if (currentPage > 1) {
             String prevCommand = "/seekinventory " + commandType + " " + playerName + " " + (currentPage - 1);
             IBungee.sendPartShowCommandMessage(player, tempMessage, leftButton, leftButton, leftHover, prevCommand, true);
             tempMessage = tempMessage.replace(leftButton, "");
         }
 
-        // 再处理右按钮
         if (currentPage < totalPages) {
             String nextCommand = "/seekinventory " + commandType + " " + playerName + " " + (currentPage + 1);
-            // 只有当左按钮已处理时才需要发送，否则整条消息已在上面发送
             if (currentPage <= 1) {
                 IBungee.sendPartShowCommandMessage(player, message, rightButton, rightButton, rightHover, nextCommand, true);
             }
@@ -621,15 +664,8 @@ public class Commands implements CommandExecutor {
         }
 
         String targetName = args[1];
-        int index;
-
-        try {
-            index = Integer.parseInt(args[2]);
-            if (index < 0) throw new NumberFormatException();
-        } catch (NumberFormatException e) {
-            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.invalid-index")));
-            return;
-        }
+        int index = parseIndexArg(args[2], player);
+        if (index < 0) return;
 
         openHistorySnapshot(player, targetName, DataManager.TYPE_INVENTORY, index);
     }
@@ -649,21 +685,58 @@ public class Commands implements CommandExecutor {
         }
 
         String targetName = args[1];
-        int index;
-
-        try {
-            index = Integer.parseInt(args[2]);
-            if (index < 0) throw new NumberFormatException();
-        } catch (NumberFormatException e) {
-            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.invalid-index")));
-            return;
-        }
+        int index = parseIndexArg(args[2], player);
+        if (index < 0) return;
 
         openHistorySnapshot(player, targetName, DataManager.TYPE_ENDERCHEST, index);
     }
 
     /**
-     * 打开历史快照
+     * 处理打开历史饰品栏命令
+     */
+    private void handleOpenCurios(Player player, String[] args) {
+        if (!player.isOp()) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.no-permission")));
+            return;
+        }
+
+        if (!CuriosSupport.isAvailable()) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.curios-not-available")));
+            return;
+        }
+
+        if (args.length < 3) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.opencurios-usage")));
+            return;
+        }
+
+        String targetName = args[1];
+        int index = parseIndexArg(args[2], player);
+        if (index < 0) return;
+
+        openCuriosHistorySnapshot(player, targetName, index);
+    }
+
+    /**
+     * 解析索引参数
+     *
+     * @param arg    参数字符串
+     * @param player 玩家（用于发送错误消息）
+     * @return 索引值，解析失败返回 -1
+     */
+    private int parseIndexArg(String arg, Player player) {
+        try {
+            int index = Integer.parseInt(arg);
+            if (index < 0) throw new NumberFormatException();
+            return index;
+        } catch (NumberFormatException e) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.invalid-index")));
+            return -1;
+        }
+    }
+
+    /**
+     * 打开历史快照（背包/末影箱）
      */
     private void openHistorySnapshot(Player player, String playerName, String type, int index) {
         String snapshotData = dataManager.getSnapshot(playerName, type, index);
@@ -688,6 +761,74 @@ public class Commands implements CommandExecutor {
         } catch (Exception e) {
             player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.snapshot-open-failed")));
             plugin.sendError("打开快照失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 打开历史饰品栏快照（使用翻页 GUI）
+     * 支持分批序列化格式（用 "|||" 分隔的多个 Inventory 序列化数据）和旧版单批格式
+     *
+     * @param player     查看者
+     * @param playerName 目标玩家名
+     * @param index      快照索引
+     */
+    private void openCuriosHistorySnapshot(Player player, String playerName, int index) {
+        String snapshotData = dataManager.getSnapshot(playerName, DataManager.TYPE_CURIOS, index);
+
+        if (snapshotData == null) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.snapshot-not-found")));
+            return;
+        }
+
+        try {
+            List<ItemStack> items = new ArrayList<>();
+
+            // 判断是否为分批格式（包含分隔符 "|||"）
+            if (snapshotData.contains(SeekInventory.CURIOS_BATCH_SEPARATOR)) {
+                // 新版分批格式：按分隔符拆分，逐批反序列化
+                String[] batches = snapshotData.split("\\|\\|\\|");
+                for (String batchData : batches) {
+                    if (batchData.isEmpty()) {
+                        continue;
+                    }
+                    // 反序列化到临时 54 槽位 Inventory
+                    Inventory tempInventory = Bukkit.createInventory(null, 54);
+                    ISerializer.deserializerInventory(tempInventory, batchData);
+
+                    // 收集所有非空物品
+                    for (int i = 0; i < 54; i++) {
+                        ItemStack item = tempInventory.getItem(i);
+                        if (!IItem.isEmpty(item)) {
+                            items.add(item);
+                        }
+                    }
+                }
+            } else {
+                // 旧版单批格式：兼容历史数据
+                Inventory tempInventory = Bukkit.createInventory(null, 54);
+                ISerializer.deserializerInventory(tempInventory, snapshotData);
+
+                for (int i = 0; i < 54; i++) {
+                    ItemStack item = tempInventory.getItem(i);
+                    if (!IItem.isEmpty(item)) {
+                        items.add(item);
+                    }
+                }
+            }
+
+            if (items.isEmpty()) {
+                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.curios-snapshot-empty")));
+                return;
+            }
+
+            // 使用翻页 GUI 展示
+            CuriosHistoryInterface gui = new CuriosHistoryInterface(player, items, playerName, plugin);
+            IInventory.openInventory(gui, player);
+
+        } catch (Exception e) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.snapshot-open-failed")));
+            plugin.sendError("打开饰品栏快照失败: " + e.getMessage());
             e.printStackTrace();
         }
     }
