@@ -1,6 +1,8 @@
 package com.flameforge.seekinventory;
 
 import com.flameforge.seekinventory.command.SeekTabComplete;
+import com.flameforge.seekinventory.curios.CuriosHandler;
+import com.flameforge.seekinventory.curios.CuriosSupport;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
 import org.bukkit.inventory.Inventory;
@@ -26,7 +28,7 @@ import java.util.Map;
 
 /**
  * SeekInventory 插件主类
- * 功能：查看和管理玩家背包/末影箱，支持历史快照（SQLite + 缓存优化）
+ * 功能：查看和管理玩家背包/末影箱/饰品栏，支持历史快照（SQLite + 缓存优化）
  *
  * @author Tany天炎
  * @version 3.0.0
@@ -56,6 +58,9 @@ public class SeekInventory extends JavaPlugin {
 
     /** bStats服务ID */
     private static final int BSTATS_PLUGIN_ID = 29016;
+
+    /** Curios 分批序列化分隔符 */
+    public static final String CURIOS_BATCH_SEPARATOR = "|||";
 
     /**
      * 插件启用时执行
@@ -106,6 +111,11 @@ public class SeekInventory extends JavaPlugin {
 
         // 初始化bStats统计
         metrics = new Metrics(this, BSTATS_PLUGIN_ID);
+
+        // 检测 Curios 模组
+        if (CuriosSupport.isAvailable()) {
+            sendMessage(languageManager.getMessage("console.curios-detected"));
+        }
 
         // 发送启用消息
         sendMessage(languageManager.getMessage("plugin.enabled"));
@@ -168,12 +178,18 @@ public class SeekInventory extends JavaPlugin {
 
     /**
      * 启动定期清理任务（每小时执行一次）
+     * 同时执行按数量清理和按天数清理
      */
     private void startCleanupTask() {
         cleanupTaskId = new BukkitRunnable() {
             @Override
             public void run() {
+                // 按数量清理（每位玩家保留 maxSnapshots 条）
                 dataManager.cleanAllOldSnapshots();
+
+                // 按天数清理（删除超过 autoCleanDays 天的快照）
+                int autoCleanDays = configManager.getAutoCleanDays();
+                dataManager.cleanExpiredSnapshots(autoCleanDays);
             }
         }.runTaskTimerAsynchronously(this, 72000, 72000).getTaskId(); // 每小时（3600秒 * 20 tick）
     }
@@ -237,6 +253,7 @@ public class SeekInventory extends JavaPlugin {
 
     /**
      * 同步保存单个玩家的快照（在异步任务中调用，不再嵌套异步）
+     * 包含背包、末影箱，以及 Curios 饰品栏（如果 Curios 模组存在）
      *
      * @param player 玩家
      */
@@ -272,12 +289,55 @@ public class SeekInventory extends JavaPlugin {
             endTemp.setItem(i, player.getEnderChest().getItem(i));
         }
 
-        // 序列化并保存
+        // 序列化并保存背包和末影箱
         String invData = ISerializer.serializerInventory(invTemp);
         String endData = ISerializer.serializerInventory(endTemp);
 
         dataManager.saveSnapshot(player.getName(), DataManager.TYPE_INVENTORY, invData);
         dataManager.saveSnapshot(player.getName(), DataManager.TYPE_ENDERCHEST, endData);
+
+        // ========== Curios 饰品栏快照（可选，支持任意数量） ==========
+        if (CuriosSupport.isAvailable()) {
+            try {
+                List<ItemStack> curiosItems = CuriosHandler.getCuriosItems(player);
+
+                if (!curiosItems.isEmpty()) {
+                    // 分批序列化：每批最多54个物品，用分隔符拼接
+                    // 这样可以保存任意数量的饰品，不再受54个限制
+                    StringBuilder curiosDataBuilder = new StringBuilder();
+                    int totalItems = curiosItems.size();
+                    int batchCount = (totalItems + 53) / 54; // 向上取整
+
+                    for (int batch = 0; batch < batchCount; batch++) {
+                        int batchStart = batch * 54;
+                        int batchEnd = Math.min(batchStart + 54, totalItems);
+                        int batchSize = batchEnd - batchStart;
+
+                        // 计算本批次的Inventory大小（向上取整到9的倍数）
+                        int invSize = calculateInventorySize(batchSize);
+                        Inventory curiosTemp = Bukkit.createInventory(null, invSize);
+
+                        for (int i = 0; i < batchSize; i++) {
+                            curiosTemp.setItem(i, curiosItems.get(batchStart + i));
+                        }
+
+                        if (batch > 0) {
+                            curiosDataBuilder.append(CURIOS_BATCH_SEPARATOR);
+                        }
+                        curiosDataBuilder.append(ISerializer.serializerInventory(curiosTemp));
+                    }
+
+                    String curiosData = curiosDataBuilder.toString();
+                    dataManager.saveSnapshot(player.getName(), DataManager.TYPE_CURIOS, curiosData);
+                }
+            } catch (Exception e) {
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("player", player.getName());
+                placeholders.put("error", e.getMessage() != null ? e.getMessage() : "Unknown");
+                sendWarning(languageManager.getMessage("snapshot.curios-save-failed", placeholders));
+            }
+        }
+        // ========== Curios 饰品栏快照结束 ==========
 
         long elapsed = System.currentTimeMillis() - startTime;
 
@@ -285,6 +345,18 @@ public class SeekInventory extends JavaPlugin {
         placeholders.put("player", player.getName());
         placeholders.put("time", String.valueOf(elapsed));
         sendMessage(languageManager.getMessage("snapshot.save-player-success", placeholders));
+    }
+
+    /**
+     * 计算序列化用的库存大小（向上取整到 9 的倍数，范围 9-54）
+     *
+     * @param itemCount 物品数量
+     * @return 库存大小
+     */
+    private int calculateInventorySize(int itemCount) {
+        if (itemCount <= 0) return 9;
+        int size = ((itemCount + 8) / 9) * 9;
+        return Math.min(54, Math.max(9, size));
     }
 
     /**

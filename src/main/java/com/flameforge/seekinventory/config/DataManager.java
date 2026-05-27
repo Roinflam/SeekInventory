@@ -30,6 +30,9 @@ public class DataManager {
     /** 快照类型 - 末影箱 */
     public static final String TYPE_ENDERCHEST = "enderchest";
 
+    /** 快照类型 - Curios 饰品栏 */
+    public static final String TYPE_CURIOS = "curios";
+
     /** 快照列表缓存（玩家名_类型 -> 快照列表） */
     private final ConcurrentHashMap<String, LinkedHashMap<Long, String>> snapshotListCache;
 
@@ -66,7 +69,7 @@ public class DataManager {
      * 保存背包快照
      *
      * @param playerName 玩家名
-     * @param type 快照类型（inventory/enderchest）
+     * @param type 快照类型（inventory/enderchest/curios）
      * @param snapshotData 序列化的快照数据
      * @return 保存是否成功
      */
@@ -141,12 +144,49 @@ public class DataManager {
                 Map<String, String> placeholders = new HashMap<>();
                 placeholders.put("count", String.valueOf(deleted));
                 plugin.sendMessage(plugin.getLanguageManager().getMessage("snapshot.clean-success", placeholders));
+
+                // 清理后清除所有缓存，确保数据一致性
+                clearAllCache();
             }
 
         } catch (SQLException e) {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("error", e.getMessage());
             plugin.sendError(plugin.getLanguageManager().getMessage("snapshot.clean-old-failed", placeholders));
+        }
+    }
+
+    /**
+     * 清理过期快照（超过指定天数的快照将被删除）
+     *
+     * @param days 保留天数，超过此天数的快照将被删除
+     */
+    public void cleanExpiredSnapshots(int days) {
+        // 计算截止时间戳（秒级）
+        long cutoffTimestamp = (System.currentTimeMillis() / 1000) - ((long) days * 24 * 60 * 60);
+
+        String sql = "DELETE FROM inventory_snapshots WHERE created_at < ?";
+
+        try (Connection conn = databaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setLong(1, cutoffTimestamp);
+            int deleted = stmt.executeUpdate();
+
+            if (deleted > 0) {
+                Map<String, String> placeholders = new HashMap<>();
+                placeholders.put("count", String.valueOf(deleted));
+                placeholders.put("days", String.valueOf(days));
+                plugin.sendMessage(plugin.getLanguageManager().getMessage("snapshot.clean-expired-success", placeholders));
+
+                // 清理后清除所有缓存，确保数据一致性
+                clearAllCache();
+            }
+
+        } catch (SQLException e) {
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("error", e.getMessage());
+            plugin.sendError(plugin.getLanguageManager().getMessage("snapshot.clean-expired-failed", placeholders));
         }
     }
 
