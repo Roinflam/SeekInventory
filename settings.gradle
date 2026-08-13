@@ -10,5 +10,5 @@ gradle.ext {
     projectName = 'SeekInventory'
 
     // 项目版本（会同步到 plugin.yml 和 config.yml）
-    projectVersion = '1.0.0'
+    projectVersion = '2.0.1'
 }
