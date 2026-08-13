@@ -1,6 +1,6 @@
 name: SeekInventory
 main: com.flameforge.seekinventory.SeekInventory
-version: '1.0.0'
+version: '2.0.1'
 author: Roinflam
 description: 查看和管理玩家背包/末影箱/饰品栏，支持历史快照（SQLite版）
 depend: [ YukiNoaAPI ]

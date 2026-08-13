@@ -36,7 +36,7 @@ dependencies {
 }
 
 // 设置Java版本
-def targetJavaVersion = 17
+def targetJavaVersion = 8
 java {
     def javaVersion = JavaVersion.toVersion(targetJavaVersion)
     sourceCompatibility = javaVersion
