@@ -118,27 +118,39 @@ public class DataManager {
         }
     }
 
+    /** 清理时每批删除的行数：每批一个短事务，批与批之间放开写锁，同一时刻的自动保存能插进来 */
+    private static final int CLEAN_BATCH_SIZE = 500;
+
     /**
      * 批量清理所有玩家的旧快照（定期调用，而非每次保存时调用）
+     *
+     * <p>先用只读查询找出要删的 id（不占写锁），再按 {@link #CLEAN_BATCH_SIZE} 分批删除。
+     * 原来一条 DELETE 带逐行相关子查询，执行期间一直占着写锁，同一时刻的自动保存会整批报 SQLITE_BUSY。</p>
+     *
+     * <p>每个（玩家, 类型）按时间从新到旧保留 maxSnapshots 条；同一秒内的多条按 id 从新到旧排。
+     * 原写法把同一秒的记录互相计数，同秒记录跨过上限时会一起删掉、剩下的不足 maxSnapshots 条。</p>
      */
     public void cleanAllOldSnapshots() {
         int maxSnapshots = plugin.getConfigManager().getMaxSnapshots();
 
-        String sql = "DELETE FROM inventory_snapshots WHERE id IN (" +
-                "SELECT id FROM inventory_snapshots AS outer_table " +
-                "WHERE (" +
-                "  SELECT COUNT(*) FROM inventory_snapshots AS inner_table " +
-                "  WHERE inner_table.player_name = outer_table.player_name " +
-                "  AND inner_table.snapshot_type = outer_table.snapshot_type " +
-                "  AND inner_table.created_at >= outer_table.created_at" +
-                ") > ?" +
-                ")";
+        String sql = "SELECT id FROM (" +
+                "SELECT id, ROW_NUMBER() OVER (" +
+                "PARTITION BY player_name, snapshot_type ORDER BY created_at DESC, id DESC" +
+                ") AS rn FROM inventory_snapshots" +
+                ") WHERE rn > ?";
 
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection conn = databaseManager.getConnection()) {
+            List<Long> ids = new ArrayList<>();
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setInt(1, maxSnapshots);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        ids.add(rs.getLong(1));
+                    }
+                }
+            }
 
-            stmt.setInt(1, maxSnapshots);
-            int deleted = stmt.executeUpdate();
+            int deleted = deleteSnapshotsByIds(conn, ids);
 
             if (deleted > 0) {
                 Map<String, String> placeholders = new HashMap<>();
@@ -157,6 +169,46 @@ public class DataManager {
     }
 
     /**
+     * 按 id 分批删除快照，每批一个事务。中途失败时回滚当前批并抛出，之前已提交的批保留（本来就是要删的）。
+     *
+     * @param conn 连接（结束时恢复原来的自动提交设置）
+     * @param ids  要删除的快照 id
+     * @return 实际删除的行数
+     */
+    private int deleteSnapshotsByIds(Connection conn, List<Long> ids) throws SQLException {
+        if (ids.isEmpty()) {
+            return 0;
+        }
+        int deleted = 0;
+        boolean autoCommit = conn.getAutoCommit();
+        try (PreparedStatement stmt = conn.prepareStatement("DELETE FROM inventory_snapshots WHERE id = ?")) {
+            conn.setAutoCommit(false);
+            for (int from = 0; from < ids.size(); from += CLEAN_BATCH_SIZE) {
+                int to = Math.min(ids.size(), from + CLEAN_BATCH_SIZE);
+                for (int i = from; i < to; i++) {
+                    stmt.setLong(1, ids.get(i));
+                    stmt.addBatch();
+                }
+                for (int n : stmt.executeBatch()) {
+                    if (n > 0) {
+                        deleted += n;
+                    }
+                }
+                conn.commit();
+            }
+        } catch (SQLException e) {
+            try {
+                conn.rollback();
+            } catch (SQLException ignored) {
+            }
+            throw e;
+        } finally {
+            conn.setAutoCommit(autoCommit);
+        }
+        return deleted;
+    }
+
+    /**
      * 清理过期快照（超过指定天数的快照将被删除）
      *
      * @param days 保留天数，超过此天数的快照将被删除
@@ -165,13 +217,20 @@ public class DataManager {
         // 计算截止时间戳（秒级）
         long cutoffTimestamp = (System.currentTimeMillis() / 1000) - ((long) days * 24 * 60 * 60);
 
-        String sql = "DELETE FROM inventory_snapshots WHERE created_at < ?";
+        // 与 cleanAllOldSnapshots 相同：先只读查出 id，再分批删，不长时间占写锁
+        String sql = "SELECT id FROM inventory_snapshots WHERE created_at < ?";
 
-        try (Connection conn = databaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-
-            stmt.setLong(1, cutoffTimestamp);
-            int deleted = stmt.executeUpdate();
+        try (Connection conn = databaseManager.getConnection()) {
+            List<Long> ids = new ArrayList<>();
+            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                stmt.setLong(1, cutoffTimestamp);
+                try (ResultSet rs = stmt.executeQuery()) {
+                    while (rs.next()) {
+                        ids.add(rs.getLong(1));
+                    }
+                }
+            }
+            int deleted = deleteSnapshotsByIds(conn, ids);
 
             if (deleted > 0) {
                 Map<String, String> placeholders = new HashMap<>();

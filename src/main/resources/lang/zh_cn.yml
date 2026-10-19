@@ -15,6 +15,7 @@ console:
   auto-save-disabled: "§7[§b背包查看§7] §7自动保存已禁用"
   auto-save-started: "§7[§b背包查看§7] §a定时保存任务已启动（间隔: {interval}分钟）"
   curios-detected: "§7[§b背包查看§7] §a检测到 Curios 饰品模组，已启用饰品栏备份功能"
+  curios-handler-init-failed: "§7[§b背包查看§7] §c检测到 Curios，但饰品栏反射处理器初始化失败；Curios 快照将跳过，请查看前面的控制台错误"
   language-detected: "§7[§b背包查看§7] §7自动检测系统语言: §e{language}"
   language-files-generated: "§a[SeekInventory] 自动生成语言文件: §e{files}"
   language-load-failed: "§e[SeekInventory] 加载语言文件 '{language}' 失败，使用默认语言"
@@ -28,7 +29,7 @@ console:
 # 配置消息
 # ========================================
 config:
-  invalid-value-reset: "§7[§b背包查看§7] §e{field} 不能小于1，已重置为 {value}"
+  invalid-value-reset: "§7[§b背包查看§7] §e{field} 取值非法，已重置为 {value}"
 
 # ========================================
 # 数据库消息
@@ -105,6 +106,21 @@ gui:
   no-edit-permission: "§7[§b背包查看§7] §c你没有权限编辑背包"
   target-offline: "§7[§b背包查看§7] §a{player}已经下线，准备打开其离线背包"
   target-offline-end: "§7[§b背包查看§7] §a{player}已经下线，准备打开其离线末影箱"
+
+  # 在线饰品栏（/seek curios）
+  online-curios-title: "§d§l{player}饰品栏"
+  curios-no-slot: "§8没有更多饰品槽"
+  curios-info-name: "§d§l{player} 的饰品栏 §7(第 {page}/{total} 页)"
+  curios-info-count: "§7共 §f{count} §7个饰品槽，空格子就是空槽"
+  curios-info-range: "§7第 §f{range} §7格: §e{type}"
+  curios-info-edit:
+    - "§a直接拿取、放入，改动立即生效"
+    - "§e放进去的东西不检查是否适合这个槽，别放错类型"
+  curios-info-readonly:
+    - "§c你没有编辑权限，只能查看"
+  curios-read-failed: "§7[§b背包查看§7] §c读取饰品栏失败，详情见控制台"
+  curios-write-failed: "§7[§b背包查看§7] §c写入饰品栏失败，详情见控制台"
+  target-offline-curios: "§7[§b背包查看§7] §e{player} 已经下线，饰品栏只能实时查看在线玩家，离线请用 §b/seek timecurios {player}"
   editing-kick: "§c管理员正在编辑你的物品，请稍后进入"
   # 占位符相关
   placeholder-name: "§6§l占位符"
@@ -151,6 +167,7 @@ command:
   snapshot-open-failed: "§7[§b背包查看§7] §c打开快照失败，数据可能已损坏"
   manual-save-success: "§7[§b背包查看§7] §a已手动保存你的背包快照"
   curios-not-available: "§7[§b背包查看§7] §c服务器未安装 Curios 饰品模组，无法使用此功能"
+  curios-offline: "§7[§b背包查看§7] §e{player} 不在线，饰品栏只能实时查看在线玩家，离线请用 §b/seek timecurios {player}"
   curios-snapshot-empty: "§7[§b背包查看§7] §c该快照中没有饰品物品"
 
   # 命令用法
@@ -196,9 +213,224 @@ command:
     - "  §b/seek save §7- §f手动保存你的背包快照"
     - "  §b/seek reload §7- §f重载配置文件"
     - "§7快捷命令: §b/inv <玩家> §7- §f快速打开玩家背包"
+    - "§7自助领取: §b/seekclaim help §7- §f查看历史备份自助领取功能"
   help-curios:
     - "§7[§b背包查看§7] §d饰品栏命令（Curios）"
+    - "  §b/seek curios [玩家] §7- §f实时查看 / 编辑在线玩家的饰品栏（留空打开自己的）"
     - "  §b/seek timecurios <玩家> [页数] §7- §f查看此玩家饰品栏备份信息"
+
+# ========================================
+# 自助领取消息
+# ========================================
+claim:
+  # ---------- 控制台 / 内部错误 ----------
+  table-created: "§7[§b背包查看§7] §7领取模块数据表创建/验证完成"
+  table-create-failed: "§7[§b背包查看§7] §c创建领取模块数据表失败: {error}"
+  grants-loaded: "§7[§b背包查看§7] §a已加载 {count} 条有效领取授权"
+  grants-load-failed: "§7[§b背包查看§7] §c加载领取授权失败: {error}"
+  grant-save-failed: "§7[§b背包查看§7] §c保存领取授权失败: {error}"
+  grant-revoke-failed: "§7[§b背包查看§7] §c撤销领取授权失败: {error}"
+  taken-save-failed: "§7[§b背包查看§7] §c保存领取记录失败: {error}"
+  taken-load-failed: "§7[§b背包查看§7] §c读取领取记录失败: {error}"
+  snapshot-query-failed: "§7[§b背包查看§7] §c查询快照失败: {error}"
+  snapshot-parse-failed: "§7[§b背包查看§7] §c解析快照数据失败: {error}"
+  log-save-failed: "§7[§b背包查看§7] §c写入领取日志失败: {error}"
+  log-query-failed: "§7[§b背包查看§7] §c查询领取日志失败: {error}"
+  cleanup-failed: "§7[§b背包查看§7] §c清理领取模块数据失败: {error}"
+
+  # ---------- 通用提示 ----------
+  no-permission: "§7[§b背包查看§7] §c你没有权限使用此命令"
+  player-only: "§7[§b背包查看§7] §c此命令只能由玩家使用"
+  invalid-type: "§7[§b背包查看§7] §c类型无效，可用值: §finv §7/ §fend §7/ §fcurios"
+  invalid-page: "§7[§b背包查看§7] §c请输入大于0的页数"
+  invalid-page-number: "§7[§b背包查看§7] §c没有这么多页！"
+  invalid-snapshot-id: "§7[§b背包查看§7] §c快照编号无效"
+  invalid-player-name: "§7[§b背包查看§7] §c玩家名不合法"
+  invalid-count: "§7[§b背包查看§7] §c次数必须为 1 - {max} 之间的整数"
+  invalid-hours: "§7[§b背包查看§7] §c有效期必须为 1 - {max} 之间的整数（小时）"
+  duration-format: "{hours}小时{minutes}分钟"
+
+  # ---------- 授权状态 ----------
+  no-grant: "§7[§b背包查看§7] §c你当前没有该类型的领取授权，请联系管理员"
+  grant-expired: "§7[§b背包查看§7] §c你的领取授权已过期，请联系管理员"
+  grant-exhausted: "§7[§b背包查看§7] §c你的领取次数已用完"
+  no-snapshot-for-type: "§7[§b背包查看§7] §c玩家 §f{player} §c没有任何{type}备份记录，无法发放"
+
+  # ---------- 玩家侧 ----------
+  my-grants-empty: "§7[§b背包查看§7] §c你当前没有任何领取授权"
+  my-grants-header: "§6§l========== §b我的领取授权 §6§l=========="
+  my-grants-item: " §f- §a{type} §7剩余 §e{remaining}§7/§7{total} 次 §7| 有效期至 §f{expire} §7(剩余{left}) §7| 输入 §b{command}"
+  my-grants-tip: "§7提示: 输入 §b/seekclaim open §7直接打开历史备份列表"
+  list-usage: "§7[§b背包查看§7] §a用法: /seekclaim list <inv|end|curios> [页数]"
+  open-usage: "§7[§b背包查看§7] §a用法: /seekclaim open [inv|end|curios] [快照编号]"
+  list-empty: "§7[§b背包查看§7] §c没有找到你的该类型备份记录"
+  list-header: "§6§l========== §b我的{type}备份 §f[第{page}页/共{total}页] §7剩余{remaining}次 §6§l=========="
+  list-item: " §f- §2记录于 {time} §7§l点击打开"
+  list-hover: "点击打开"
+  list-page-tip: "§7翻页: §b/seekclaim list {type} {prev} §7| §b/seekclaim list {type} {next}"
+  snapshot-not-found: "§7[§b背包查看§7] §c未找到该备份记录，或它不属于你"
+  snapshot-empty: "§7[§b背包查看§7] §c该备份中没有任何物品"
+
+  # ---------- 历史备份列表界面 ----------
+  open-button: "§a§l[点我打开历史备份]"
+  open-button-line: "§7» §a§l[点我打开历史备份] §7也可以输入 §b/seekclaim open"
+  open-button-hover: "§a点击打开你的历史备份列表"
+  menu-title: "§8我的历史备份 §7- §0{type}"
+  menu-list-filler-name: "§f备份列表"
+  menu-list-filler-lore:
+    - "§7这里列的是你的历史备份，越靠前越新"
+    - "§7点一份备份进去，挑你要找回的物品"
+  menu-entry-name: "§a第 {number} 份备份"
+  menu-entry-name-latest: "§a第 {number} 份备份 §e(最新)"
+  menu-entry-time: "§7记录时间: §f{time}"
+  menu-entry-ago: "§7距今: §f{ago}"
+  menu-entry-taken: "§7你已从这份领过 §e{taken} §7格"
+  menu-entry-click: "§a▶ 点击打开，挑想要的物品"
+  menu-guide-name: "§e§l怎么领取？"
+  menu-guide-lore:
+    - "§f① §7上面点一份备份（看记录时间，"
+    - "§7   找出事之前那一份）"
+    - "§f② §7在里面对准物品按 §bShift + 左键"
+    - "§7   领一格扣 §c1 §7次额度，一组也算一次"
+    - "§f③ §7领完按 §fESC §7回到这里换别的备份"
+    - ""
+    - "§c拿错不补，领取记录会通报管理员"
+  menu-quota-name: "§b§l我的额度"
+  menu-quota-line: "§a{type} §7剩 §e{remaining} §7次 §8| §7还有 §f{left}"
+  menu-quota-tail:
+    - ""
+    - "§7额度过期或用完后就看不到备份了"
+  menu-tab-name: "§f{type}备份"
+  menu-tab-selected-name: "§a§l▶ {type}备份 ◀"
+  menu-tab-lore:
+    - "§7剩余 §e{remaining} §7次"
+    - "§a点击切换到{type}备份"
+  menu-tab-selected-lore:
+    - "§7剩余 §e{remaining} §7次"
+    - "§a正在查看"
+  menu-tab-none-name: "§7{type}备份"
+  menu-tab-none-lore:
+    - "§7你没有这一类的领取额度"
+  menu-tab-none-hint: "§7[§b背包查看§7] §c你没有{type}备份的领取额度，请联系管理员"
+  ago-minutes: "{minutes} 分钟前"
+  ago-hours: "{hours} 小时前"
+  ago-days: "{days} 天前"
+  item-hint-lore:
+    - ""
+    - "§a▶ Shift + 左键 领取这一格"
+    - "§7(扣 1 次额度，拿错不补)"
+  join-reminder: "§7[§b背包查看§7] §e你还有没用完的备份领取额度: {detail}"
+
+  # ---------- 领取界面 ----------
+  gui-title: "§d§l{type}备份 §8{time}"
+  open-warning:
+    - "§c§l━━━━━━━━━━ 领取须知 ━━━━━━━━━━"
+    - "§e本界面为§c只读§e界面，领取请用 §bShift + 左键§e。"
+    - "§e本备份共 §f{count} §e件物品，你剩余 §c{remaining} §e次额度。"
+    - "§c拿错不补，全部领取行为都会通报管理员。"
+    - "§7完整规则见界面底部的§f彩色玻璃板§7，请先看完再操作。"
+    - "§c§l━━━━━━━━━━━━━━━━━━━━━━━━"
+  click-hint: "§7[§b背包查看§7] §c请使用 §eShift + 左键 §c领取物品，其他操作已被禁用"
+  already-taken: "§7[§b背包查看§7] §c该物品已被领取过，无法重复领取"
+  inventory-full: "§7[§b背包查看§7] §c你的背包空间不足，请清理后再来领取"
+  take-success: "§7[§b背包查看§7] §a已领取 §f{item} §7x{amount} §7| 剩余次数: §e{remaining}"
+  depleted-close: "§7[§b背包查看§7] §e领取次数已用完，界面即将关闭"
+  taken-name: "§8§l已领取"
+  taken-lore-item: "§7原物品: §f{item}"
+  taken-lore:
+    - "§c此格已被领取，无法再次领取"
+  filler-name: "§c§l只读界面"
+  filler-lore:
+    - "§7此处无法放入或移动物品"
+    - "§7规则详见旁边的彩色玻璃板"
+
+  # 四块规则说明玻璃板（背包放在 41-44，末影箱放在补出的第 4 行，饰品栏放在导航栏两侧）
+  rule1-name: "§e§l① 怎么领取"
+  rule1-lore:
+    - "§7对准想要的物品"
+    - "§b Shift + 左键 §7点击即可领走该格"
+    - "§7左键、右键、拖拽§c一律无效"
+  rule2-name: "§6§l② 额度怎么算"
+  rule2-lore:
+    - "§7每领取§f一格§7消耗 §c1 次§7额度"
+    - "§7那一格是 1 个还是一整组"
+    - "§c都只算 1 次§7，请优先挑贵重的"
+    - "§7查询剩余: §b/seekclaim info"
+  rule3-name: "§c§l③ 拿错不补"
+  rule3-lore:
+    - "§7物品一旦领取§c立刻到手"
+    - "§c无法放回、无法撤销"
+    - "§7已领取的格子会变成灰色"
+    - "§c且永远不能再领第二次"
+  rule4-name: "§d§l④ 全程记录"
+  rule4-lore:
+    - "§7你领取的每一件物品"
+    - "§7都会连同§f时间、名称、数量"
+    - "§7一并§c通报管理员"
+    - "§7额度用完界面将自动关闭"
+  info-name: "§e第 {page}/{total} 页 §7| 剩余 {remaining} 次"
+  info-lore:
+    - "§7本备份共有 §f{count} §7件物品"
+    - "§7剩余领取次数: §e{remaining}"
+    - "§eShift + 左键 §7领取一格物品"
+    - "§c拿错不予补偿，请谨慎操作"
+  prev-page: "§a§l◀ 上一页"
+  no-prev: "§7§l◀ 已是第一页"
+  next-page: "§a§l下一页 ▶"
+  no-next: "§7§l▶ 已是最后一页"
+  prev-lore:
+    - "§7点击查看上一页"
+  next-lore:
+    - "§7点击查看下一页"
+  disabled-lore:
+    - "§7此方向没有更多页了"
+
+  # ---------- 管理员侧 ----------
+  grant-usage: "§7[§b背包查看§7] §a用法: /seekclaim grant <玩家> <inv|end|curios|all> <次数> [小时]"
+  grant-all-skip: "§7[§b背包查看§7] §7玩家 §f{player} §7没有{type}备份，已跳过"
+  grant-target-offline: "§7[§b背包查看§7] §7对方不在线，下次进服会收到提醒"
+  grant-notify-line: "§7[§b背包查看§7] §a管理员给了你 §e{count} §a次{type}备份领取额度 §7(剩 §e{remaining} §7次，有效期至 §f{expire}§7)"
+  grant-notify-guide:
+    - "§7你可以从历史备份里把丢失的物品找回来："
+    - "§f① §7点下面的按钮（或输入 §b/seekclaim open§7）打开备份列表"
+    - "§f② §7选出事之前的那份备份，对准物品按 §bShift + 左键 §7领取"
+    - "§f③ §7领一格扣 §c1 §7次额度，挑最贵重的领，§c拿错不补"
+  grant-title: "§a§l你获得了备份领取额度"
+  grant-subtitle: "§f点聊天栏按钮，或输入 §b/seekclaim open"
+  revoke-usage: "§7[§b背包查看§7] §a用法: /seekclaim revoke <玩家> [inv|end|curios]"
+  grant-failed: "§7[§b背包查看§7] §c发放授权失败，请查看控制台日志"
+  grant-success: "§7[§b背包查看§7] §a已向 §f{player} §a发放 §e{count} §a次{type}领取额度 §7| 当前剩余 §e{remaining} §7次 | 有效期至 §f{expire}"
+  grant-notify:
+    - "§7[§b背包查看§7] §a管理员已授予你 §e{count} §a次{type}备份领取额度"
+    - "§7剩余次数: §e{remaining} §7| 有效期至: §f{expire}"
+    - "§7输入 §b/seekclaim info §7查看详情并开始领取"
+  revoke-success: "§7[§b背包查看§7] §a已撤销 §f{player} §a的 §e{count} §a条领取授权"
+  revoke-none: "§7[§b背包查看§7] §e玩家 §f{player} §e当前没有可撤销的领取授权"
+  query-empty: "§7[§b背包查看§7] §e当前没有任何有效的领取授权"
+  query-header: "§6§l========== §b有效领取授权 §f({count} 条) §6§l=========="
+  query-item: " §f- §b{player} §7| §a{type} §7| 剩余 §e{remaining}§7/§7{total} §7| 发放者 §f{granter} §7| 至 §f{expire} §7(剩余{left})"
+  log-empty: "§7[§b背包查看§7] §e没有找到领取日志"
+  log-all-players: "全服"
+  log-header: "§6§l========== §b{player}领取日志 §f[第{page}页/共{total}页] §6§l=========="
+  log-item: " §f- §b{player} §7于 §f{time} §7从§a{type}§7备份(§f{snapshot}§7)领取 §e{count} §7件: §f{items} §7| 剩余 §e{remaining}"
+
+  # ---------- 上报通知 ----------
+  report-pending-header: "§7[§b背包查看§7] §e你离线期间产生了 §c{count} §e条备份领取记录:"
+  report-line: "§7[§b背包查看§7] §e玩家 §b{player} §e于 §f{time} §e从§a{type}§e备份(§f{snapshot}§e)领取了 §c{count} §e件物品: §f{items} §7| 剩余次数 §e{remaining}"
+
+  # ---------- 帮助 ----------
+  help:
+    - "§7[§b背包查看§7] §7自助领取命令"
+    - "  §b/seekclaim open §7- §f打开我的历史备份列表（推荐）"
+    - "  §b/seekclaim info §7- §f查看自己当前的领取额度"
+    - "  §b/seekclaim list <inv|end|curios> [页数] §7- §f在聊天栏列出自己的历史备份"
+    - "  §b/seekclaim open <inv|end|curios> <快照编号> §7- §f直接打开某一份备份"
+  help-admin:
+    - "§7[§b背包查看§7] §d管理命令"
+    - "  §b/seekclaim grant <玩家> <类型|all> <次数> [小时] §7- §f发放领取额度（all = 背包、末影箱、饰品栏各一份）"
+    - "  §b/seekclaim revoke <玩家> [类型] §7- §f撤销领取额度"
+    - "  §b/seekclaim query [玩家] §7- §f查询当前有效授权"
+    - "  §b/seekclaim log [玩家] [页数] §7- §f查询领取日志"
 
 # ========================================
 # 错误消息

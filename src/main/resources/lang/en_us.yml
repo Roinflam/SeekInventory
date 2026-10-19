@@ -15,6 +15,7 @@ console:
   auto-save-disabled: "§7[§bSeekInventory§7] §7Auto-save disabled"
   auto-save-started: "§7[§bSeekInventory§7] §aAuto-save task started (interval: {interval} minutes)"
   curios-detected: "§7[§bSeekInventory§7] §aCurios mod detected, curio slot backup enabled"
+  curios-handler-init-failed: "§7[§bSeekInventory§7] §cCurios was detected, but the curio reflection handler failed to initialize; Curios snapshots will be skipped. Check the earlier console error"
   language-detected: "§7[§bSeekInventory§7] §7Auto-detected system language: §e{language}"
   language-files-generated: "§a[SeekInventory] Auto-generated language files: §e{files}"
   language-load-failed: "§e[SeekInventory] Failed to load language file '{language}', using default language"
@@ -28,7 +29,7 @@ console:
 # Configuration Messages
 # ========================================
 config:
-  invalid-value-reset: "§7[§bSeekInventory§7] §e{field} cannot be less than 1, reset to {value}"
+  invalid-value-reset: "§7[§bSeekInventory§7] §e{field} has an invalid value, reset to {value}"
 
 # ========================================
 # Database Messages
@@ -105,6 +106,21 @@ gui:
   no-edit-permission: "§7[§bSeekInventory§7] §cYou don't have permission to edit inventories"
   target-offline: "§7[§bSeekInventory§7] §a{player} went offline, preparing to open offline inventory"
   target-offline-end: "§7[§bSeekInventory§7] §a{player} went offline, preparing to open offline ender chest"
+
+  # Online curios (/seek curios)
+  online-curios-title: "§d§l{player}'s Curios"
+  curios-no-slot: "§8No more curio slots"
+  curios-info-name: "§d§l{player}'s curios §7(page {page}/{total})"
+  curios-info-count: "§7{count} curio slot(s); an empty cell is an empty slot"
+  curios-info-range: "§7Cells §f{range}§7: §e{type}"
+  curios-info-edit:
+    - "§aTake or place items directly; changes apply instantly"
+    - "§eItems are not checked against the slot type - be careful"
+  curios-info-readonly:
+    - "§cYou don't have edit permission (view only)"
+  curios-read-failed: "§7[§bSeekInventory§7] §cFailed to read curios, see console"
+  curios-write-failed: "§7[§bSeekInventory§7] §cFailed to write curios, see console"
+  target-offline-curios: "§7[§bSeekInventory§7] §e{player} went offline; live curios only work for online players, use §b/seek timecurios {player}"
   editing-kick: "§cAn administrator is editing your items, please try again later"
   # Placeholder related
   placeholder-name: "§6§lPlaceholder"
@@ -151,6 +167,7 @@ command:
   snapshot-open-failed: "§7[§bSeekInventory§7] §cFailed to open snapshot, data may be corrupted"
   manual-save-success: "§7[§bSeekInventory§7] §aManually saved your inventory snapshot"
   curios-not-available: "§7[§bSeekInventory§7] §cCurios mod is not installed on this server"
+  curios-offline: "§7[§bSeekInventory§7] §e{player} is offline; live curios only work for online players, use §b/seek timecurios {player}"
   curios-snapshot-empty: "§7[§bSeekInventory§7] §cNo curio items found in this snapshot"
 
   # Command Usage
@@ -196,9 +213,224 @@ command:
     - "  §b/seek save §7- §fManually save your inventory snapshot"
     - "  §b/seek reload §7- §fReload configuration"
     - "§7Quick command: §b/inv <player> §7- §fQuickly open player inventory"
+    - "§7Self-service claim: §b/seekclaim help §7- §fSelf-service backup claim feature"
   help-curios:
     - "§7[§bSeekInventory§7] §dCurios Commands"
+    - "  §b/seek curios [player] §7- §fView / edit an online player's curios live (blank = your own)"
     - "  §b/seek timecurios <player> [page] §7- §fView player's curio slot history"
+
+# ========================================
+# Self-Service Claim Messages
+# ========================================
+claim:
+  # ---------- Console / internal errors ----------
+  table-created: "§7[§bSeekInventory§7] §7Claim module tables created/verified"
+  table-create-failed: "§7[§bSeekInventory§7] §cFailed to create claim module tables: {error}"
+  grants-loaded: "§7[§bSeekInventory§7] §aLoaded {count} active claim grants"
+  grants-load-failed: "§7[§bSeekInventory§7] §cFailed to load claim grants: {error}"
+  grant-save-failed: "§7[§bSeekInventory§7] §cFailed to save claim grant: {error}"
+  grant-revoke-failed: "§7[§bSeekInventory§7] §cFailed to revoke claim grant: {error}"
+  taken-save-failed: "§7[§bSeekInventory§7] §cFailed to save claim record: {error}"
+  taken-load-failed: "§7[§bSeekInventory§7] §cFailed to read claim records: {error}"
+  snapshot-query-failed: "§7[§bSeekInventory§7] §cFailed to query snapshot: {error}"
+  snapshot-parse-failed: "§7[§bSeekInventory§7] §cFailed to parse snapshot data: {error}"
+  log-save-failed: "§7[§bSeekInventory§7] §cFailed to write claim log: {error}"
+  log-query-failed: "§7[§bSeekInventory§7] §cFailed to query claim logs: {error}"
+  cleanup-failed: "§7[§bSeekInventory§7] §cFailed to clean claim module data: {error}"
+
+  # ---------- Generic ----------
+  no-permission: "§7[§bSeekInventory§7] §cYou don't have permission to use this command"
+  player-only: "§7[§bSeekInventory§7] §cThis command can only be used by a player"
+  invalid-type: "§7[§bSeekInventory§7] §cInvalid type. Allowed: §finv §7/ §fend §7/ §fcurios"
+  invalid-page: "§7[§bSeekInventory§7] §cPlease enter a page number greater than 0"
+  invalid-page-number: "§7[§bSeekInventory§7] §cInvalid page number!"
+  invalid-snapshot-id: "§7[§bSeekInventory§7] §cInvalid snapshot id"
+  invalid-player-name: "§7[§bSeekInventory§7] §cInvalid player name"
+  invalid-count: "§7[§bSeekInventory§7] §cCount must be an integer between 1 and {max}"
+  invalid-hours: "§7[§bSeekInventory§7] §cDuration must be an integer between 1 and {max} hours"
+  duration-format: "{hours}h {minutes}m"
+
+  # ---------- Grant state ----------
+  no-grant: "§7[§bSeekInventory§7] §cYou have no claim grant for this type, please contact an admin"
+  grant-expired: "§7[§bSeekInventory§7] §cYour claim grant has expired, please contact an admin"
+  grant-exhausted: "§7[§bSeekInventory§7] §cYou have used up all your claim credits"
+  no-snapshot-for-type: "§7[§bSeekInventory§7] §cPlayer §f{player} §chas no {type} backups, cannot grant"
+
+  # ---------- Player side ----------
+  my-grants-empty: "§7[§bSeekInventory§7] §cYou currently have no claim grants"
+  my-grants-header: "§6§l========== §bMy Claim Grants §6§l=========="
+  my-grants-item: " §f- §a{type} §7| §e{remaining}§7/§7{total} left §7| until §f{expire} §7({left} left) §7| §b{command}"
+  my-grants-tip: "§7Tip: type §b/seekclaim open §7to open your backup list"
+  list-usage: "§7[§bSeekInventory§7] §aUsage: /seekclaim list <inv|end|curios> [page]"
+  open-usage: "§7[§bSeekInventory§7] §aUsage: /seekclaim open [inv|end|curios] [snapshot id]"
+  list-empty: "§7[§bSeekInventory§7] §cNo backups of this type were found for you"
+  list-header: "§6§l========== §bMy {type} Backups §f[Page {page}/{total}] §7{remaining} left §6§l=========="
+  list-item: " §f- §2Recorded at {time} §7§lClick to open"
+  list-hover: "Click to open"
+  list-page-tip: "§7Pages: §b/seekclaim list {type} {prev} §7| §b/seekclaim list {type} {next}"
+  snapshot-not-found: "§7[§bSeekInventory§7] §cBackup not found, or it does not belong to you"
+  snapshot-empty: "§7[§bSeekInventory§7] §cThis backup contains no items"
+
+  # ---------- Claim GUI ----------
+  gui-title: "§d§l{type} Backup §8{time}"
+  open-warning:
+    - "§c§l━━━━━━━━━ CLAIM RULES ━━━━━━━━━"
+    - "§eThis window is §cREAD-ONLY§e. Claim with §bShift + Left-Click§e."
+    - "§eThis backup holds §f{count} §eitems. You have §c{remaining} §ecredits left."
+    - "§cWrong picks are not refunded. Every claim is reported to admins."
+    - "§7Full rules are on the §fcoloured glass panes§7 at the bottom."
+    - "§c§l━━━━━━━━━━━━━━━━━━━━━━━━"
+  click-hint: "§7[§bSeekInventory§7] §cUse §eShift + Left-Click §cto claim. All other actions are disabled"
+  already-taken: "§7[§bSeekInventory§7] §cThis item has already been claimed"
+  inventory-full: "§7[§bSeekInventory§7] §cYour inventory is full, free up space and try again"
+  take-success: "§7[§bSeekInventory§7] §aClaimed §f{item} §7x{amount} §7| Credits left: §e{remaining}"
+  depleted-close: "§7[§bSeekInventory§7] §eNo credits left, closing the window"
+  taken-name: "§8§lAlready Claimed"
+  taken-lore-item: "§7Original item: §f{item}"
+  taken-lore:
+    - "§cThis slot has been claimed and cannot be claimed again"
+  filler-name: "§c§lRead-Only Window"
+  filler-lore:
+    - "§7Items cannot be placed or moved here"
+    - "§7See the coloured panes for the rules"
+
+  # Four rule panes (inventory: slots 41-44, ender chest: extra 4th row, curios: beside the nav bar)
+  rule1-name: "§e§l1. How To Claim"
+  rule1-lore:
+    - "§7Point at the item you want"
+    - "§b Shift + Left-Click §7to take that slot"
+    - "§7Left/right click and dragging §cdo nothing"
+  rule2-name: "§6§l2. How Credits Work"
+  rule2-lore:
+    - "§7Each §fslot §7you take costs §c1 credit"
+    - "§7A single item and a full stack"
+    - "§ccost exactly the same§7, pick valuables first"
+    - "§7Check credits: §b/seekclaim info"
+  rule3-name: "§c§l3. No Refunds"
+  rule3-lore:
+    - "§7Claimed items are §cyours instantly"
+    - "§cThey cannot be put back or undone"
+    - "§7Claimed slots turn grey"
+    - "§cand can never be claimed again"
+  rule4-name: "§d§l4. Everything Is Logged"
+  rule4-lore:
+    - "§7Every item you claim is reported"
+    - "§7to the administrators along with"
+    - "§fthe time, name and amount"
+    - "§7The window closes when credits run out"
+  info-name: "§ePage {page}/{total} §7| {remaining} credits left"
+  info-lore:
+    - "§7This backup holds §f{count} §7items"
+    - "§7Credits left: §e{remaining}"
+    - "§eShift + Left-Click §7to claim one slot"
+    - "§cWrong picks are not refunded"
+  prev-page: "§a§l◀ Previous Page"
+  no-prev: "§7§l◀ First Page"
+  next-page: "§a§lNext Page ▶"
+  no-next: "§7§l▶ Last Page"
+  prev-lore:
+    - "§7Click to view previous page"
+  next-lore:
+    - "§7Click to view next page"
+  disabled-lore:
+    - "§7No more pages in this direction"
+
+  # ---------- Admin side ----------
+  grant-usage: "§7[§bSeekInventory§7] §aUsage: /seekclaim grant <player> <inv|end|curios|all> <count> [hours]"
+  grant-all-skip: "§7[§bSeekInventory§7] §7Player §f{player} §7has no {type} backups, skipped"
+  grant-target-offline: "§7[§bSeekInventory§7] §7The player is offline and will be reminded on next join"
+  grant-notify-line: "§7[§bSeekInventory§7] §aAn admin gave you §e{count} §a{type} backup claim credit(s) §7(§e{remaining} §7left, expires §f{expire}§7)"
+  grant-notify-guide:
+    - "§7You can get lost items back from your backups:"
+    - "§f① §7Click the button below (or type §b/seekclaim open§7)"
+    - "§f② §7Pick a backup from before the loss, §bShift + Left-click §7an item"
+    - "§f③ §7Each slot costs §c1 §7credit - take the valuable ones, §cno refunds"
+  grant-title: "§a§lYou got backup claim credits"
+  grant-subtitle: "§fClick the chat button or type §b/seekclaim open"
+  revoke-usage: "§7[§bSeekInventory§7] §aUsage: /seekclaim revoke <player> [inv|end|curios]"
+  grant-failed: "§7[§bSeekInventory§7] §cFailed to issue the grant, check the console log"
+  grant-success: "§7[§bSeekInventory§7] §aGranted §f{player} §e{count} §a{type} claim credits §7| now §e{remaining} §7left | until §f{expire}"
+  grant-notify:
+    - "§7[§bSeekInventory§7] §aAn admin granted you §e{count} §a{type} backup claim credits"
+    - "§7Credits left: §e{remaining} §7| Valid until: §f{expire}"
+    - "§7Type §b/seekclaim info §7to view details and start claiming"
+  revoke-success: "§7[§bSeekInventory§7] §aRevoked §e{count} §aclaim grant(s) from §f{player}"
+  revoke-none: "§7[§bSeekInventory§7] §ePlayer §f{player} §ehas no claim grants to revoke"
+  query-empty: "§7[§bSeekInventory§7] §eThere are no active claim grants"
+  query-header: "§6§l========== §bActive Claim Grants §f({count}) §6§l=========="
+  query-item: " §f- §b{player} §7| §a{type} §7| §e{remaining}§7/§7{total} §7| by §f{granter} §7| until §f{expire} §7({left} left)"
+  log-empty: "§7[§bSeekInventory§7] §eNo claim logs found"
+  log-all-players: "All Players"
+  log-header: "§6§l========== §b{player} Claim Logs §f[Page {page}/{total}] §6§l=========="
+  log-item: " §f- §b{player} §7at §f{time} §7claimed §e{count} §7item(s) from §a{type}§7 backup (§f{snapshot}§7): §f{items} §7| §e{remaining} §7left"
+
+  # ---------- Backup list window ----------
+  open-button: "§a§l[Click to open your backups]"
+  open-button-line: "§7» §a§l[Click to open your backups] §7or type §b/seekclaim open"
+  open-button-hover: "§aClick to open your backup list"
+  menu-title: "§8My backups §7- §0{type}"
+  menu-list-filler-name: "§fBackup list"
+  menu-list-filler-lore:
+    - "§7Your backups are listed here, newest first"
+    - "§7Click one to pick the items you want back"
+  menu-entry-name: "§aBackup #{number}"
+  menu-entry-name-latest: "§aBackup #{number} §e(latest)"
+  menu-entry-time: "§7Recorded: §f{time}"
+  menu-entry-ago: "§7Age: §f{ago}"
+  menu-entry-taken: "§7You already took §e{taken} §7slot(s) from it"
+  menu-entry-click: "§a▶ Click to open"
+  menu-guide-name: "§e§lHow to claim?"
+  menu-guide-lore:
+    - "§f① §7Click a backup above (pick the one"
+    - "§7   recorded before things went wrong)"
+    - "§f② §7Inside, §bShift + Left-click §7an item"
+    - "§7   Each slot costs §c1 §7credit, even a full stack"
+    - "§f③ §7Press §fESC §7to come back here"
+    - ""
+    - "§cNo refunds for wrong picks; admins are notified"
+  menu-quota-name: "§b§lMy credits"
+  menu-quota-line: "§a{type} §e{remaining} §7left §8| §7expires in §f{left}"
+  menu-quota-tail:
+    - ""
+    - "§7Backups are hidden once credits expire or run out"
+  menu-tab-name: "§f{type} backups"
+  menu-tab-selected-name: "§a§l▶ {type} backups ◀"
+  menu-tab-lore:
+    - "§e{remaining} §7credit(s) left"
+    - "§aClick to switch"
+  menu-tab-selected-lore:
+    - "§e{remaining} §7credit(s) left"
+    - "§aViewing"
+  menu-tab-none-name: "§7{type} backups"
+  menu-tab-none-lore:
+    - "§7You have no credits for this category"
+  menu-tab-none-hint: "§7[§bSeekInventory§7] §cYou have no credits for {type} backups, ask an admin"
+  ago-minutes: "{minutes} min ago"
+  ago-hours: "{hours} h ago"
+  ago-days: "{days} d ago"
+  item-hint-lore:
+    - ""
+    - "§a▶ Shift + Left-click to claim this slot"
+    - "§7(costs 1 credit, no refunds)"
+  join-reminder: "§7[§bSeekInventory§7] §eYou still have unused backup claim credits: {detail}"
+
+  # ---------- Reports ----------
+  report-pending-header: "§7[§bSeekInventory§7] §e§c{count} §ebackup claim record(s) occurred while you were offline:"
+  report-line: "§7[§bSeekInventory§7] §ePlayer §b{player} §eclaimed §c{count} §eitem(s) from the §a{type}§e backup (§f{snapshot}§e) at §f{time}: §f{items} §7| §e{remaining} §7credits left"
+
+  # ---------- Help ----------
+  help:
+    - "§7[§bSeekInventory§7] §7Self-service claim commands"
+    - "  §b/seekclaim open §7- §fOpen your backup list (recommended)"
+    - "  §b/seekclaim info §7- §fView your current claim credits"
+    - "  §b/seekclaim list <inv|end|curios> [page] §7- §fList your own backups"
+    - "  §b/seekclaim open <inv|end|curios> <snapshot id> §7- §fOpen the claim window"
+  help-admin:
+    - "§7[§bSeekInventory§7] §dAdmin commands"
+    - "  §b/seekclaim grant <player> <type|all> <count> [hours] §7- §fIssue claim credits (all = one of each)"
+    - "  §b/seekclaim revoke <player> [type] §7- §fRevoke claim credits"
+    - "  §b/seekclaim query [player] §7- §fQuery active grants"
+    - "  §b/seekclaim log [player] [page] §7- §fQuery claim logs"
 
 # ========================================
 # Error Messages

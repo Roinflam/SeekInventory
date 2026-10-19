@@ -38,7 +38,7 @@ public class SeekTabComplete implements TabCompleter {
 
     /** Curios 相关主命令列表（仅在 CuriosSupport.isAvailable() 为 true 时显示） */
     private static final List<String> CURIOS_COMMANDS = Arrays.asList(
-            "timecurios", "opencurios"
+            "curios", "timecurios", "opencurios"
     );
 
     /**
@@ -74,6 +74,7 @@ public class SeekTabComplete implements TabCompleter {
                     // 玩家名补全（始终可用）
                     completions.addAll(filterMatches(getPlayerNames(), args[1]));
                     break;
+                case "curios":
                 case "timecurios":
                 case "opencurios":
                     // 仅在 Curios 可用时才提供补全

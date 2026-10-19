@@ -36,6 +36,18 @@ public class ConfigManager {
     /** 自动清理天数（超过此天数的快照将被自动清理） */
     private int autoCleanDays;
 
+    /** 领取授权默认有效期（小时） */
+    private int claimDefaultHours;
+
+    /** 领取日志保留天数（超过且已上报的日志将被清理） */
+    private int claimLogKeepDays;
+
+    /** 发放额度时目标玩家在线且没开着别的界面，直接弹出历史备份列表 */
+    private boolean claimAutoOpenOnGrant;
+
+    /** 持有未用完额度的玩家进服时提醒 */
+    private boolean claimJoinReminder;
+
     /**
      * 构造函数
      *
@@ -65,6 +77,12 @@ public class ConfigManager {
         this.pageSize = config.getInt("page-size", 10);
         this.autoCleanDays = config.getInt("auto-clean-days", 3);
 
+        // 领取功能配置项（旧版本配置文件缺失时使用默认值，不影响启动）
+        this.claimDefaultHours = config.getInt("claim.default-hours", 12);
+        this.claimLogKeepDays = config.getInt("claim.log-keep-days", 30);
+        this.claimAutoOpenOnGrant = config.getBoolean("claim.auto-open-on-grant", true);
+        this.claimJoinReminder = config.getBoolean("claim.join-reminder", true);
+
         // 验证配置
         validateConfig();
     }
@@ -78,6 +96,10 @@ public class ConfigManager {
         this.maxSnapshots = 10;
         this.pageSize = 10;
         this.autoCleanDays = 3;
+        this.claimDefaultHours = 12;
+        this.claimLogKeepDays = 30;
+        this.claimAutoOpenOnGrant = true;
+        this.claimJoinReminder = true;
     }
 
     /**
@@ -85,36 +107,47 @@ public class ConfigManager {
      */
     private void validateConfig() {
         if (saveInterval < 1) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("field", "save-interval");
-            placeholders.put("value", "30");
-            plugin.sendWarning(plugin.getLanguageManager().getMessage("config.invalid-value-reset", placeholders));
+            warnReset("save-interval", "30");
             saveInterval = 30;
         }
 
         if (maxSnapshots < 1) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("field", "max-snapshots");
-            placeholders.put("value", "10");
-            plugin.sendWarning(plugin.getLanguageManager().getMessage("config.invalid-value-reset", placeholders));
+            warnReset("max-snapshots", "10");
             maxSnapshots = 10;
         }
 
         if (pageSize < 1) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("field", "page-size");
-            placeholders.put("value", "10");
-            plugin.sendWarning(plugin.getLanguageManager().getMessage("config.invalid-value-reset", placeholders));
+            warnReset("page-size", "10");
             pageSize = 10;
         }
 
         if (autoCleanDays < 1) {
-            Map<String, String> placeholders = new HashMap<>();
-            placeholders.put("field", "auto-clean-days");
-            placeholders.put("value", "3");
-            plugin.sendWarning(plugin.getLanguageManager().getMessage("config.invalid-value-reset", placeholders));
+            warnReset("auto-clean-days", "3");
             autoCleanDays = 3;
         }
+
+        if (claimDefaultHours < 1 || claimDefaultHours > 8760) {
+            warnReset("claim.default-hours", "12");
+            claimDefaultHours = 12;
+        }
+
+        if (claimLogKeepDays < 1) {
+            warnReset("claim.log-keep-days", "30");
+            claimLogKeepDays = 30;
+        }
+    }
+
+    /**
+     * 输出配置项被重置的警告
+     *
+     * @param field 配置项名称
+     * @param value 重置后的值
+     */
+    private void warnReset(String field, String value) {
+        Map<String, String> placeholders = new HashMap<>();
+        placeholders.put("field", field);
+        placeholders.put("value", value);
+        plugin.sendWarning(plugin.getLanguageManager().getMessage("config.invalid-value-reset", placeholders));
     }
 
     // Getter 方法
@@ -142,6 +175,32 @@ public class ConfigManager {
      */
     public int getAutoCleanDays() {
         return autoCleanDays;
+    }
+
+    /**
+     * 获取领取授权默认有效期（小时）
+     *
+     * @return 默认有效期小时数
+     */
+    public int getClaimDefaultHours() {
+        return claimDefaultHours;
+    }
+
+    /**
+     * 获取领取日志保留天数
+     *
+     * @return 日志保留天数
+     */
+    public int getClaimLogKeepDays() {
+        return claimLogKeepDays;
+    }
+
+    public boolean isClaimAutoOpenOnGrant() {
+        return claimAutoOpenOnGrant;
+    }
+
+    public boolean isClaimJoinReminder() {
+        return claimJoinReminder;
     }
 
     public YamlConfiguration getConfig() {
