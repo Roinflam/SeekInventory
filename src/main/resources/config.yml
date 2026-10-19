@@ -7,7 +7,7 @@
 # 只有当主版本号（第一个数字）发生变化时，插件才会自动覆盖所有配置文件
 # 例如：3.x.x → 4.0.0 会覆盖，但 3.0.0 → 3.1.0 不会覆盖
 # ========================================
-ConfigVersion: '2.0.1'
+ConfigVersion: '2.1.0'
 
 # ========================================
 # Language Settings
@@ -77,3 +77,49 @@ auto-clean-days: 3
 # 每页显示的快照记录数
 # 用于 /seek timeinv 和 /seek timeend 命令
 page-size: 10
+
+# ========================================
+# Self-Service Claim Settings
+# 自助领取设置
+# ========================================
+# Admins grant a player N claim credits for a snapshot type via
+# /seekclaim grant <player> <inv|end|curios> <count> [hours].
+# The player can then browse their own backups and take items with Shift+Left-Click.
+# Each Shift+Left-Click consumes exactly 1 credit regardless of stack size.
+# A given slot of a given snapshot can only ever be claimed once, so unique items
+# cannot be duplicated even if the player still has credits left.
+# ----------------------------------------
+# 管理员通过 /seekclaim grant <玩家> <inv|end|curios> <次数> [小时] 发放领取额度。
+# 玩家随后可以浏览自己的历史备份，用 Shift+左键领取物品。
+# 每次 Shift+左键消耗 1 次额度，与该槽位是 1 个还是一组无关。
+# 同一条快照的同一个槽位终身只能被领取一次，因此即使玩家仍有额度，
+# 也无法把同一件独一无二的物品复制出多份。
+claim:
+
+  # Default validity period in hours when [hours] is omitted in the grant command
+  # Range: 1 - 8760 (1 year)
+  # ----------------------------------------
+  # 发放命令省略 [小时] 参数时使用的默认有效期
+  # 取值范围：1 - 8760（1 年）
+  default-hours: 12
+
+  # How many days to keep claim logs that have already been reported to admins
+  # Unreported logs are never deleted - they wait for the first admin to log in
+  # Minimum: 1 day
+  # ----------------------------------------
+  # 已上报给管理员的领取日志保留天数
+  # 尚未上报的日志永不删除，会一直等到第一位管理员上线
+  # 最小值：1 天
+  log-keep-days: 30
+
+  # When granting, if the target player is online and has no other container open,
+  # pop up their backup list right away (otherwise they get a clickable chat button)
+  # ----------------------------------------
+  # 发放额度时，目标玩家在线且没开着别的界面，就直接弹出他的历史备份列表
+  # （开着别的界面时只发聊天栏按钮，不打断他）
+  auto-open-on-grant: true
+
+  # Remind players who still have unused claim quota when they join
+  # ----------------------------------------
+  # 还有没用完的领取额度的玩家进服时提醒一次（带可点击按钮）
+  join-reminder: true

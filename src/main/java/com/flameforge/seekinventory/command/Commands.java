@@ -1,10 +1,12 @@
 package com.flameforge.seekinventory.command;
 
 import com.flameforge.seekinventory.SeekInventory;
+import com.flameforge.seekinventory.curios.CuriosHandler;
 import com.flameforge.seekinventory.curios.CuriosSupport;
 import com.flameforge.seekinventory.gui.CuriosHistoryInterface;
 import com.flameforge.seekinventory.gui.OfflineEndInterface;
 import com.flameforge.seekinventory.gui.OfflineInterface;
+import com.flameforge.seekinventory.gui.OnlineCuriosInterface;
 import com.flameforge.seekinventory.gui.OnlineEndInterface;
 import de.tr7zw.nbtapi.*;
 import org.bukkit.Bukkit;
@@ -137,6 +139,10 @@ public class Commands implements CommandExecutor {
                 handleTimeEnd(player, args);
                 break;
 
+            case "curios":
+                handleCurios(player, args);
+                break;
+
             case "timecurios":
                 handleTimeCurios(player, args);
                 break;
@@ -226,6 +232,49 @@ public class Commands implements CommandExecutor {
                 player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.player-not-found", "player", targetName)));
             }
         }
+    }
+
+    /**
+     * 打开在线玩家的饰品栏，实时查看 / 编辑（/seek curios [玩家]，留空打开自己的）
+     *
+     * <p>饰品栏挂在玩家实体上，只有在线时才读得到；离线玩家引导去看历史快照。</p>
+     */
+    private void handleCurios(Player player, String[] args) {
+        if (!player.hasPermission("si.open")) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.no-permission")));
+            return;
+        }
+        if (!CuriosSupport.isAvailable() || !CuriosHandler.isInitialized()) {
+            player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.curios-not-available")));
+            return;
+        }
+
+        Player target;
+        if (args.length < 2) {
+            target = player;
+        } else {
+            target = Bukkit.getPlayerExact(args[1]);
+            if (target == null) {
+                String key = IPlayer.hasOfflinePlayer(args[1]) ? "command.curios-offline" : "command.player-not-found";
+                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage(key, "player", args[1])));
+                return;
+            }
+        }
+
+        // /seek 整体在异步线程分发，Curios capability 只能在主线程读写
+        final Player finalTarget = target;
+        Bukkit.getScheduler().runTask(plugin, () -> {
+            if (!player.isOnline() || !finalTarget.isOnline()) {
+                return;
+            }
+            try {
+                OnlineCuriosInterface gui = new OnlineCuriosInterface(player, finalTarget, plugin);
+                player.openInventory(gui.getInventory());
+            } catch (IllegalStateException e) {
+                plugin.sendError(e.getMessage());
+                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("gui.curios-read-failed")));
+            }
+        });
     }
 
     /**

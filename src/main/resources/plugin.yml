@@ -1,8 +1,8 @@
 name: SeekInventory
 main: com.flameforge.seekinventory.SeekInventory
-version: '2.0.1'
+version: '2.1.0'
 author: Roinflam
-description: 查看和管理玩家背包/末影箱/饰品栏，支持历史快照（SQLite版）
+description: 查看和管理玩家背包/末影箱/饰品栏，支持历史快照与自助领取（SQLite版）
 depend: [ YukiNoaAPI ]
 softdepend: [ Curios ]
 api-version: 1.13
@@ -14,6 +14,10 @@ commands:
   Inv:
     description: 快速打开玩家背包
     usage: /Inv <玩家名>
+  SeekClaim:
+    description: 历史备份自助领取
+    usage: /SeekClaim <info|list|open|grant|revoke|query|log>
+    aliases: [ siclaim, claim ]
 permissions:
   si.open:
     description: 打开玩家背包/末影箱
@@ -23,4 +27,16 @@ permissions:
     default: op
   si.check:
     description: 查找物品
+    default: op
+  si.claim:
+    description: 使用自助领取功能（仍需管理员发放额度才能实际领取）
+    default: true
+  si.claim.grant:
+    description: 发放、撤销与查询领取额度
+    default: op
+  si.claim.log:
+    description: 查询领取日志
+    default: op
+  si.claim.report:
+    description: 接收玩家领取行为的实时/补发通知
     default: op
