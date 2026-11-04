@@ -12,10 +12,15 @@ import com.flameforge.seekinventory.gui.ClaimMenuInterface;
 import com.flameforge.seekinventory.gui.OnlineCuriosInterface;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
+import org.bukkit.event.EventHandler;
+import org.bukkit.event.EventPriority;
+import org.bukkit.event.Listener;
+import org.bukkit.event.player.PlayerQuitEvent;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
+import org.bukkit.scheduler.BukkitTask;
 import com.flameforge.seekinventory.bstats.Metrics;
 import com.flameforge.seekinventory.command.Commands;
 import com.flameforge.seekinventory.command.Inv;
@@ -28,10 +33,17 @@ import pers.tany.yukinoaapi.interfacepart.other.IString;
 import pers.tany.yukinoaapi.interfacepart.register.IRegister;
 import pers.tany.yukinoaapi.interfacepart.serializer.ISerializer;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
 
 /**
  * SeekInventory 插件主类
@@ -75,6 +87,39 @@ public class SeekInventory extends JavaPlugin {
 
     /** Curios 分批序列化分隔符 */
     public static final String CURIOS_BATCH_SEPARATOR = "|||";
+
+    // ── 自动保存分批采集 ──────────────────────────────────────────────────
+
+    /** 每 tick 最多采集几名玩家 */
+    private static final int CAPTURE_MAX_PLAYERS_PER_TICK = 3;
+
+    /** 每 tick 采集的时间预算（纳秒）：用完就留到下一 tick，但每 tick 至少采集一名，保证有进展 */
+    private static final long CAPTURE_BUDGET_NANOS = 2_000_000L;
+
+    /** 卸载时等写库线程写完的上限（秒） */
+    private static final long WRITER_SHUTDOWN_WAIT_SECONDS = 60L;
+
+    /**
+     * 这一轮自动保存还没采集的玩家（UUID，按开始时的在线顺序）。
+     * 一轮开始时把当时在线的玩家全部排进来，之后每 tick 采几个；这一轮中途才上线的玩家不进这一轮，
+     * 和以前「到点那一刻在线的玩家」是同一批人。
+     */
+    private final Deque<UUID> pendingCapture = new ArrayDeque<>();
+
+    /** 这一轮已经采集好的快照，一轮采完一起交给写库线程 */
+    private List<CapturedSnapshot> roundSnapshots;
+
+    /** 这一轮的分批采集任务；null 表示当前没有进行中的一轮 */
+    private BukkitTask roundTask;
+
+    /** 这一轮开始的时间（毫秒），用于「整轮耗时」日志 */
+    private long roundStartTime;
+
+    /**
+     * 单线程写库：自动保存和手动保存都排在这里，按交出的先后写入；卸载时等它写完再关连接池。
+     * 以前用 Bukkit 的异步任务，卸载时连接池先关、还没写完的那批直接失败。
+     */
+    private ExecutorService snapshotWriter;
 
     /**
      * 已在主线程采集并序列化完成的玩家快照数据。
@@ -136,6 +181,11 @@ public class SeekInventory extends JavaPlugin {
         // 初始化数据管理器（SQLite + 缓存）
         dataManager = new DataManager(this);
         dataManager.initialize();
+        snapshotWriter = Executors.newSingleThreadExecutor(r -> {
+            Thread t = new Thread(r, "SeekInventory-SnapshotWriter");
+            t.setDaemon(true);
+            return t;
+        });
 
         // 初始化领取模块（依赖 DataManager 已建立的连接池）
         claimManager = new ClaimManager(this);
@@ -170,6 +220,7 @@ public class SeekInventory extends JavaPlugin {
 
         // 注册事件监听器
         IRegister.registerEvents(this, new Events(this));
+        IRegister.registerEvents(this, new RoundQuitListener());
 
         // 启动定时保存任务
         startAutoSaveTask();
@@ -200,6 +251,11 @@ public class SeekInventory extends JavaPlugin {
     public void onDisable() {
         // 停止定时保存任务
         stopAutoSaveTask();
+
+        // 正在分批进行的一轮：剩下的玩家在这里同步采完（卸载时的一次性开销，和以前每轮的开销相同），
+        // 交给写库线程后等它写完，再关连接池；不放弃，免得这一轮里排在后面的玩家没有快照
+        finishRoundNow();
+        shutdownSnapshotWriter();
 
         // 停止定期清理任务
         stopCleanupTask();
@@ -232,7 +288,7 @@ public class SeekInventory extends JavaPlugin {
         int intervalTicks = configManager.getSaveInterval() * 60 * 20; // 分钟转刻
 
         // 定时器必须运行在主线程，因为快照采集会读取 Bukkit Player、Inventory 和 Curios capability。
-        // 真正的数据库写入会在 saveAllSnapshots() 内部转到异步线程，不会阻塞主线程等待 SQLite。
+        // 采集按 tick 分批，真正的数据库写入交给写库线程，不会阻塞主线程等待 SQLite。
         autoSaveTaskId = new BukkitRunnable() {
             @Override
             public void run() {
@@ -291,13 +347,19 @@ public class SeekInventory extends JavaPlugin {
     }
 
     /**
-     * 保存所有在线玩家的快照。
+     * 保存所有在线玩家的快照（开始一轮自动保存）。
      *
      * <p>线程模型分为两段：</p>
      * <ol>
-     *   <li>主线程：读取 Player、背包、末影箱、Curios capability，并立即序列化为字符串；</li>
-     *   <li>异步线程：只把已经序列化好的字符串批量写入 SQLite。</li>
+     *   <li>主线程：读取 Player、背包、末影箱、Curios capability，并立即序列化为字符串；
+     *       按每 tick 最多 {@value #CAPTURE_MAX_PLAYERS_PER_TICK} 名、{@value #CAPTURE_BUDGET_NANOS} 纳秒预算分批做
+     *       （以前所有在线玩家在同一 tick 里采完，人多、饰品多时单次 30 ms 以上）；</li>
+     *   <li>写库线程：一轮采完后把已经序列化好的字符串按顺序写入 SQLite。</li>
      * </ol>
+     *
+     * <p>同一名玩家的背包、末影箱、饰品仍在同一 tick 里采完，快照内部前后一致（拆开的话两次采集之间挪动的物品会两边都有或都没有）。
+     * 这一轮里还没轮到就下线的玩家，在下线事件里当场采集（这时背包还在）；中途上线的不进这一轮。
+     * 上一轮还没采完时又到点，这一次跳过（正常情况下一轮只需要几十 tick）。</p>
      *
      * <p>这样既避免 Mohist/Forge capability 被异步访问，也继续保证数据库 I/O 不占用服务器主线程。</p>
      */
@@ -312,62 +374,196 @@ public class SeekInventory extends JavaPlugin {
             return;
         }
 
-        final List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
+        if (roundTask != null) {
+            getLogger().warning("上一轮自动保存还没采集完（剩 " + pendingCapture.size() + " 名玩家），本次跳过");
+            return;
+        }
+
+        List<Player> players = new ArrayList<>(Bukkit.getOnlinePlayers());
         if (players.isEmpty()) {
             return;
         }
 
-        final long totalStartTime = System.currentTimeMillis();
-        final List<CapturedSnapshot> capturedSnapshots = new ArrayList<>();
-
-        // 主线程只负责复制和序列化玩家当前状态，不做数据库 I/O。
+        pendingCapture.clear();
         for (Player player : players) {
-            if (player == null || !player.isOnline()) {
-                continue;
-            }
-            try {
-                capturedSnapshots.add(capturePlayerSnapshot(player));
-            } catch (Exception e) {
-                Map<String, String> placeholders = new HashMap<>();
-                placeholders.put("player", player.getName());
-                placeholders.put("error", getErrorMessage(e));
-                sendError(languageManager.getMessage("snapshot.save-player-failed", placeholders));
+            if (player != null) {
+                pendingCapture.add(player.getUniqueId());
             }
         }
+        roundSnapshots = new ArrayList<>(pendingCapture.size());
+        roundStartTime = System.currentTimeMillis();
 
-        if (capturedSnapshots.isEmpty()) {
+        // 第一批就在这一 tick 做；没采完的从下一 tick 起每 tick 接着做
+        roundTask = new BukkitRunnable() {
+            @Override
+            public void run() {
+                captureRoundBatch();
+            }
+        }.runTaskTimer(this, 1L, 1L);
+        captureRoundBatch();
+    }
+
+    /**
+     * 采集这一轮的一批玩家（每 tick 调用一次）。采完最后一名就结束这一轮、交给写库线程。
+     */
+    private void captureRoundBatch() {
+        if (roundTask == null) {
+            return;
+        }
+        long start = System.nanoTime();
+        int captured = 0;
+        while (!pendingCapture.isEmpty()) {
+            if (captured >= CAPTURE_MAX_PLAYERS_PER_TICK
+                    || (captured > 0 && System.nanoTime() - start >= CAPTURE_BUDGET_NANOS)) {
+                return;
+            }
+            Player player = Bukkit.getPlayer(pendingCapture.poll());
+            if (player == null || !player.isOnline()) {
+                // 已下线：下线事件里已经采过了
+                continue;
+            }
+            captureIntoRound(player);
+            captured++;
+        }
+        finishRound();
+    }
+
+    /**
+     * 采集一名玩家并放进这一轮的结果；失败只打日志，不影响其他玩家
+     *
+     * @param player 在线玩家
+     */
+    private void captureIntoRound(Player player) {
+        try {
+            roundSnapshots.add(capturePlayerSnapshot(player));
+        } catch (Exception e) {
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("player", player.getName());
+            placeholders.put("error", getErrorMessage(e));
+            sendError(languageManager.getMessage("snapshot.save-player-failed", placeholders));
+        }
+    }
+
+    /**
+     * 这一轮里还没轮到的玩家下线：当场采集，不让他漏掉这一轮。
+     * LOWEST：在别的插件处理下线（清背包、转移物品之类）之前看到的背包，最接近这一轮开始时的样子。
+     */
+    private final class RoundQuitListener implements Listener {
+        @EventHandler(priority = EventPriority.LOWEST)
+        public void onPlayerQuit(PlayerQuitEvent evt) {
+            if (roundTask == null) {
+                return;
+            }
+            Player player = evt.getPlayer();
+            if (pendingCapture.remove(player.getUniqueId())) {
+                captureIntoRound(player);
+            }
+        }
+    }
+
+    /**
+     * 卸载时调用：进行中的一轮剩下的玩家同步采完，并交给写库线程
+     */
+    private void finishRoundNow() {
+        if (roundTask == null) {
+            return;
+        }
+        while (!pendingCapture.isEmpty()) {
+            Player player = Bukkit.getPlayer(pendingCapture.poll());
+            if (player != null && player.isOnline()) {
+                captureIntoRound(player);
+            }
+        }
+        finishRound();
+    }
+
+    /**
+     * 结束这一轮：停掉分批任务，把采好的快照交给写库线程按顺序写入
+     */
+    private void finishRound() {
+        if (roundTask != null) {
+            roundTask.cancel();
+            roundTask = null;
+        }
+        final List<CapturedSnapshot> capturedSnapshots = roundSnapshots;
+        final long totalStartTime = roundStartTime;
+        roundSnapshots = null;
+        pendingCapture.clear();
+
+        if (capturedSnapshots == null || capturedSnapshots.isEmpty()) {
             return;
         }
 
-        // 单个异步任务按顺序写入，避免为每位玩家创建一个数据库任务导致连接池瞬时并发过高。
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                int successCount = 0;
+        // 写库线程按顺序写入，避免为每位玩家创建一个数据库任务导致连接池瞬时并发过高。
+        submitWrite(() -> {
+            int successCount = 0;
 
-                for (CapturedSnapshot snapshot : capturedSnapshots) {
-                    if (persistCapturedSnapshot(snapshot)) {
-                        successCount++;
-                    }
+            for (CapturedSnapshot snapshot : capturedSnapshots) {
+                if (persistCapturedSnapshot(snapshot)) {
+                    successCount++;
                 }
-
-                long totalElapsed = System.currentTimeMillis() - totalStartTime;
-
-                Map<String, String> placeholders = new HashMap<>();
-                placeholders.put("count", String.valueOf(successCount));
-                placeholders.put("time", String.valueOf(totalElapsed));
-                sendMessage(languageManager.getMessage("snapshot.batch-save-complete", placeholders));
-
-                // Bukkit 广播必须回到主线程。
-                new BukkitRunnable() {
-                    @Override
-                    public void run() {
-                        String message = languageManager.getMessage("snapshot.auto-save-complete");
-                        Bukkit.broadcastMessage(IString.color(message));
-                    }
-                }.runTask(SeekInventory.this);
             }
-        }.runTaskAsynchronously(this);
+
+            long totalElapsed = System.currentTimeMillis() - totalStartTime;
+
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("count", String.valueOf(successCount));
+            placeholders.put("time", String.valueOf(totalElapsed));
+            sendMessage(languageManager.getMessage("snapshot.batch-save-complete", placeholders));
+
+            // Bukkit 广播必须回到主线程；插件正在卸载时不再广播。
+            if (isEnabled()) {
+                try {
+                    new BukkitRunnable() {
+                        @Override
+                        public void run() {
+                            String message = languageManager.getMessage("snapshot.auto-save-complete");
+                            Bukkit.broadcastMessage(IString.color(message));
+                        }
+                    }.runTask(SeekInventory.this);
+                } catch (RuntimeException ignored) {
+                    // 卸载过程中排不上任务
+                }
+            }
+        });
+    }
+
+    /**
+     * 把一次写库交给写库线程；写库线程已关闭时在当前线程直接写（只会发生在卸载收尾时）
+     *
+     * @param task 写库任务（只碰已序列化好的字符串和数据库）
+     */
+    private void submitWrite(Runnable task) {
+        ExecutorService writer = snapshotWriter;
+        if (writer != null) {
+            try {
+                writer.execute(task);
+                return;
+            } catch (RejectedExecutionException ignored) {
+                // 已关闭，落到下面同步写
+            }
+        }
+        task.run();
+    }
+
+    /**
+     * 卸载时调用，必须在关闭连接池之前：等写库线程把已交出的快照写完
+     */
+    private void shutdownSnapshotWriter() {
+        ExecutorService writer = snapshotWriter;
+        snapshotWriter = null;
+        if (writer == null) {
+            return;
+        }
+        writer.shutdown();
+        try {
+            if (!writer.awaitTermination(WRITER_SHUTDOWN_WAIT_SECONDS, TimeUnit.SECONDS)) {
+                getLogger().severe("快照写库线程 " + WRITER_SHUTDOWN_WAIT_SECONDS + " 秒内没有写完，剩下的快照没有保存");
+                writer.shutdownNow();
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
     }
 
     /**
@@ -536,7 +732,7 @@ public class SeekInventory extends JavaPlugin {
     /**
      * 保存单个玩家的快照（用于手动保存命令）。
      *
-     * <p>如果调用方不在主线程，会先切回主线程完成数据采集；采集完成后再异步写数据库。</p>
+     * <p>如果调用方不在主线程，会先切回主线程完成数据采集；采集完成后交给写库线程写数据库。</p>
      *
      * @param player 玩家
      */
@@ -562,12 +758,7 @@ public class SeekInventory extends JavaPlugin {
             return;
         }
 
-        new BukkitRunnable() {
-            @Override
-            public void run() {
-                persistCapturedSnapshot(snapshot);
-            }
-        }.runTaskAsynchronously(this);
+        submitWrite(() -> persistCapturedSnapshot(snapshot));
     }
 
     /**
