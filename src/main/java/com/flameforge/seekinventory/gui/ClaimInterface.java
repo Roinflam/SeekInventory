@@ -1,5 +1,6 @@
 package com.flameforge.seekinventory.gui;
 
+import com.flameforge.seekinventory.util.VersionCompat;
 import com.flameforge.seekinventory.SeekInventory;
 import com.flameforge.seekinventory.claim.ClaimGrant;
 import com.flameforge.seekinventory.claim.ClaimLog;
@@ -608,7 +609,7 @@ public class ClaimInterface implements InventoryHolder {
         int need = stack.getAmount();
         int max = Math.max(1, stack.getMaxStackSize());
 
-        ItemStack[] contents = viewer.getInventory().getStorageContents();
+        ItemStack[] contents = VersionCompat.getStorageContents(viewer.getInventory());
         for (ItemStack slot : contents) {
             if (slot == null || slot.getType() == Material.AIR) {
                 need -= max;

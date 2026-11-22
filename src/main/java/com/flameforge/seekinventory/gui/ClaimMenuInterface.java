@@ -1,5 +1,6 @@
 package com.flameforge.seekinventory.gui;
 
+import com.flameforge.seekinventory.util.VersionCompat;
 import com.flameforge.seekinventory.SeekInventory;
 import com.flameforge.seekinventory.claim.ClaimGrant;
 import com.flameforge.seekinventory.claim.ClaimManager;
@@ -412,7 +413,7 @@ public class ClaimMenuInterface implements InventoryHolder {
             lore.add(msg("claim.menu-quota-line", ph));
         }
         lore.addAll(plugin.getLanguageManager().getMessageList("claim.menu-quota-tail"));
-        return new ItemBuilder(Material.CLOCK)
+        return new ItemBuilder(VersionCompat.CLOCK)
                 .setDisplayName(msg("claim.menu-quota-name"))
                 .setLore(lore)
                 .getItemStack();
@@ -432,7 +433,7 @@ public class ClaimMenuInterface implements InventoryHolder {
         if (DataManager.TYPE_ENDERCHEST.equals(type)) {
             return Material.ENDER_CHEST;
         }
-        return Material.TOTEM_OF_UNDYING;
+        return VersionCompat.TOTEM;
     }
 
     // ==================== 交互 ====================

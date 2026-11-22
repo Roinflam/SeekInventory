@@ -141,11 +141,37 @@ public class DataManager {
 
         try (Connection conn = databaseManager.getConnection()) {
             List<Long> ids = new ArrayList<>();
-            try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setInt(1, maxSnapshots);
-                try (ResultSet rs = stmt.executeQuery()) {
+            if (databaseManager.supportsWindowFunctions()) {
+                try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+                    stmt.setInt(1, maxSnapshots);
+                    try (ResultSet rs = stmt.executeQuery()) {
+                        while (rs.next()) {
+                            ids.add(rs.getLong(1));
+                        }
+                    }
+                }
+            } else {
+                // 老 SQLite 没有窗口函数：同样的排序取出来，在这边按（玩家, 类型）数
+                String scanSql = "SELECT id, player_name, snapshot_type FROM inventory_snapshots " +
+                        "ORDER BY player_name, snapshot_type, created_at DESC, id DESC";
+                try (PreparedStatement stmt = conn.prepareStatement(scanSql);
+                     ResultSet rs = stmt.executeQuery()) {
+                    String lastPlayer = null;
+                    String lastType = null;
+                    int rank = 0;
                     while (rs.next()) {
-                        ids.add(rs.getLong(1));
+                        String player = rs.getString(2);
+                        String type = rs.getString(3);
+                        if (Objects.equals(player, lastPlayer) && Objects.equals(type, lastType)) {
+                            rank++;
+                        } else {
+                            lastPlayer = player;
+                            lastType = type;
+                            rank = 1;
+                        }
+                        if (rank > maxSnapshots) {
+                            ids.add(rs.getLong(1));
+                        }
                     }
                 }
             }

@@ -1,5 +1,6 @@
 package com.flameforge.seekinventory.gui;
 
+import com.flameforge.seekinventory.util.VersionCompat;
 import com.flameforge.seekinventory.SeekInventory;
 import com.flameforge.seekinventory.curios.CuriosHandler;
 import org.bukkit.Bukkit;
@@ -218,7 +219,7 @@ public class OnlineCuriosInterface implements InventoryHolder {
         lore.addAll(plugin.getLanguageManager().getMessageList(
                 canEdit ? "gui.curios-info-edit" : "gui.curios-info-readonly"));
 
-        return new ItemBuilder(Material.TOTEM_OF_UNDYING)
+        return new ItemBuilder(VersionCompat.TOTEM)
                 .setDisplayName(msg("gui.curios-info-name", ph))
                 .setLore(lore)
                 .getItemStack();

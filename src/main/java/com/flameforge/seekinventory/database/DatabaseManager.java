@@ -5,12 +5,15 @@ import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.io.File;
+import java.sql.BatchUpdateException;
 import java.sql.Connection;
+import java.sql.Driver;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Properties;
 
 /**
  * 数据库管理器
@@ -31,6 +34,12 @@ public class DatabaseManager {
 
     /** 拿不到 SQLite 写锁时的最长等待（毫秒），见 {@link #initialize()} */
     public static final int BUSY_TIMEOUT_MS = 30000;
+
+    /** 老版 sqlite-jdbc：建连接时不能带 journal_mode / busy_timeout，见 {@link #needsLegacyPragmas(String)} */
+    private boolean legacyDriver;
+
+    /** 服务端自带的 SQLite 版本，读不到时为 0 */
+    private int sqliteVersion;
 
     /**
      * 构造函数
@@ -53,8 +62,11 @@ public class DatabaseManager {
             }
 
             // 配置 HikariCP
+            String jdbcUrl = "jdbc:sqlite:" + databaseFile.getAbsolutePath();
+            legacyDriver = needsLegacyPragmas(jdbcUrl);
+
             HikariConfig config = new HikariConfig();
-            config.setJdbcUrl("jdbc:sqlite:" + databaseFile.getAbsolutePath());
+            config.setJdbcUrl(jdbcUrl);
             config.setDriverClassName("org.sqlite.JDBC");
             config.setMaximumPoolSize(20); // 增加到 20
             config.setMinimumIdle(5); // 增加最小空闲连接
@@ -75,9 +87,11 @@ public class DatabaseManager {
             //   journal_mode=WAL      读不再被写挡住，写事务提交更快（WAL 设置写在库文件里，之后一直生效）；
             //   synchronous=NORMAL    WAL 下的推荐值，断电最多丢最后一次提交，不会损坏库；
             //   busy_timeout=30000    拿不到写锁时最多等 30 秒再报错，而不是 3 秒。
-            config.addDataSourceProperty("journal_mode", "WAL");
             config.addDataSourceProperty("synchronous", "NORMAL");
-            config.addDataSourceProperty("busy_timeout", String.valueOf(BUSY_TIMEOUT_MS));
+            if (!legacyDriver) {
+                config.addDataSourceProperty("journal_mode", "WAL");
+                config.addDataSourceProperty("busy_timeout", String.valueOf(BUSY_TIMEOUT_MS));
+            }
 
             // 创建连接池
             dataSource = new HikariDataSource(config);
@@ -105,6 +119,9 @@ public class DatabaseManager {
     private void checkPragmas() {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
+            try (ResultSet rs = stmt.executeQuery("SELECT sqlite_version()")) {
+                sqliteVersion = rs.next() ? parseVersion(rs.getString(1)) : 0;
+            }
             String mode;
             try (ResultSet rs = stmt.executeQuery("PRAGMA journal_mode")) {
                 mode = rs.next() ? rs.getString(1) : "?";
@@ -114,14 +131,71 @@ public class DatabaseManager {
                     mode = rs.next() ? rs.getString(1) : "?";
                 }
             }
-            int busyTimeout;
+            int busyTimeout = -1;
+            // SQLite 3.7.15 之前没有这个 pragma，老驱动对没有结果的查询直接抛异常
             try (ResultSet rs = stmt.executeQuery("PRAGMA busy_timeout")) {
                 busyTimeout = rs.next() ? rs.getInt(1) : -1;
+            } catch (SQLException ignored) {
             }
-            plugin.getLogger().info("SQLite journal_mode=" + mode + ", busy_timeout=" + busyTimeout + "ms");
+            plugin.getLogger().info("SQLite journal_mode=" + mode + ", busy_timeout=" + busyTimeout + "ms"
+                    + (legacyDriver ? " (legacy driver)" : ""));
         } catch (SQLException e) {
             plugin.getLogger().warning("SQLite 设置检查失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 老版 sqlite-jdbc（如 1.7.10 Uranium 自带的 3.7.2）建连接时把各项 pragma 放进一个批里执行，
+     * journal_mode 会返回结果，整批报 "query returns results"，连接池起不来。
+     * 先带上属性单独连一次试试，这种驱动改成建好连接后再设：WAL 由 {@link #checkPragmas()} 切，忙等时间见 {@link #getConnection()}。
+     */
+    private boolean needsLegacyPragmas(String jdbcUrl) {
+        Properties props = new Properties();
+        props.setProperty("journal_mode", "WAL");
+        props.setProperty("synchronous", "NORMAL");
+        props.setProperty("busy_timeout", String.valueOf(BUSY_TIMEOUT_MS));
+        try {
+            Driver driver = (Driver) Class.forName("org.sqlite.JDBC").getDeclaredConstructor().newInstance();
+            try (Connection ignored = driver.connect(jdbcUrl, props)) {
+                return false;
+            }
+        } catch (SQLException e) {
+            for (Throwable t = e; t != null; t = t.getCause()) {
+                if (t instanceof BatchUpdateException) {
+                    return true;
+                }
+            }
+            return false;
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    private static int parseVersion(String version) {
+        if (version == null) {
+            return 0;
+        }
+        String[] parts = version.trim().split("\\.");
+        int result = 0;
+        for (int i = 0; i < 3; i++) {
+            int n = 0;
+            if (i < parts.length) {
+                try {
+                    n = Integer.parseInt(parts[i].replaceAll("[^0-9].*$", ""));
+                } catch (NumberFormatException ignored) {
+                }
+            }
+            result = result * 1000 + n;
+        }
+        return result;
+    }
+
+    /**
+     * 窗口函数（ROW_NUMBER() OVER）是 SQLite 3.25 才有的；1.7.10 / 1.12.2 服务端自带的驱动都更老。
+     * 版本没读到时按支持处理，和原来的行为一样。
+     */
+    public boolean supportsWindowFunctions() {
+        return sqliteVersion == 0 || sqliteVersion >= 3025000;
     }
 
     /**
@@ -170,7 +244,15 @@ public class DatabaseManager {
         if (dataSource == null || dataSource.isClosed()) {
             throw new SQLException(plugin.getLanguageManager().getMessage("database.connection-not-initialized"));
         }
-        return dataSource.getConnection();
+        Connection conn = dataSource.getConnection();
+        if (legacyDriver) {
+            // 老驱动没有 busy_timeout 这个 pragma，它的 setQueryTimeout 设的就是整个连接的忙等时间（默认 3 秒）
+            try (Statement stmt = conn.createStatement()) {
+                stmt.setQueryTimeout(BUSY_TIMEOUT_MS / 1000);
+            } catch (SQLException ignored) {
+            }
+        }
+        return conn;
     }
 
     /**

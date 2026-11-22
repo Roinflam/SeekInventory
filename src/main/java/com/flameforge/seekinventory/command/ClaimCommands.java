@@ -1,5 +1,6 @@
 package com.flameforge.seekinventory.command;
 
+import com.flameforge.seekinventory.util.VersionCompat;
 import com.flameforge.seekinventory.SeekInventory;
 import com.flameforge.seekinventory.claim.ClaimGrant;
 import com.flameforge.seekinventory.claim.ClaimLog;
@@ -516,7 +517,7 @@ public class ClaimCommands implements CommandExecutor {
 
         String firstType = granted.get(0).getGrantType();
         ClaimMenuInterface.sendOpenButton(plugin, target, firstType);
-        target.sendTitle(IString.color(plugin.getLanguageManager().getMessage("claim.grant-title")),
+        VersionCompat.sendTitle(target, IString.color(plugin.getLanguageManager().getMessage("claim.grant-title")),
                 IString.color(plugin.getLanguageManager().getMessage("claim.grant-subtitle")), 10, 60, 20);
 
         if (plugin.getConfigManager().isClaimAutoOpenOnGrant() && ClaimMenuInterface.isIdle(target)) {
