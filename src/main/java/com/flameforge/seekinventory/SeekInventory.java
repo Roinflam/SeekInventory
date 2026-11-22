@@ -600,7 +600,8 @@ public class SeekInventory extends JavaPlugin {
                 itemStack = player.getInventory().getItem(37);
             } else if (i == 39) {
                 itemStack = player.getInventory().getItem(36);
-            } else {
+            } else if (i < player.getInventory().getSize()) {
+                // 1.8 及以下没有副手，背包只有 40 格
                 try {
                     itemStack = player.getInventory().getItem(i);
                 } catch (Exception e) {
