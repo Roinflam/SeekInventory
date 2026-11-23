@@ -18,6 +18,7 @@ import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.Plugin;
+import org.bukkit.scheduler.BukkitRunnable;
 import pers.tany.yukinoaapi.interfacepart.item.IItem;
 import pers.tany.yukinoaapi.interfacepart.other.IRandom;
 import pers.tany.yukinoaapi.interfacepart.other.IString;
@@ -70,6 +71,9 @@ public class OfflineInterface implements InventoryHolder {
     // 有物品读不出来时整份只读，关界面也不写回，免得把读不出的和没读到的物品一起覆盖掉
     private boolean loadFailed = false;
 
+    // 同一名玩家已有别人开着离线界面时只读，两份各自整份写回会互相覆盖、多出物品
+    private boolean viewOnly = false;
+
     /** 占位符物品 - 橙色玻璃板 */
     private ItemStack placeholderItem;
 
@@ -100,7 +104,7 @@ public class OfflineInterface implements InventoryHolder {
             if (gui == null || gui.viewer.getOpenInventory().getTopInventory().getHolder() != gui) {
                 continue;
             }
-            if (!gui.loadFailed) {
+            if (!gui.loadFailed && !gui.viewOnly) {
                 gui.saveInventoryData();
             }
             gui.viewer.closeInventory();
@@ -142,9 +146,50 @@ public class OfflineInterface implements InventoryHolder {
             inventory.setItem(i, placeholderItem);
         }
 
+        for (OfflineInterface other : ACTIVE_GUIS.values()) {
+            if (!other.viewer.getUniqueId().equals(viewer.getUniqueId())
+                    && other.offlinePlayer.getUniqueId().equals(offlinePlayer.getUniqueId())) {
+                viewOnly = true;
+                break;
+            }
+        }
+
         // 确保静态监听器已注册，然后加入活跃映射（自动覆盖旧实例）
         registerListener(plugin);
         ACTIVE_GUIS.put(viewer.getUniqueId(), this);
+    }
+
+    // 界面下一 tick 才真正打开。这期间查看者下线、目标又上线、或打开被别的插件取消，都要撤掉登记，否则目标会一直被拦在服外
+    public void open() {
+        new BukkitRunnable() {
+            @Override
+            public void run() {
+                OfflineInterface self = OfflineInterface.this;
+                UUID viewerId = viewer.getUniqueId();
+                if (ACTIVE_GUIS.get(viewerId) != self) {
+                    return;
+                }
+                if (!viewer.isOnline()) {
+                    ACTIVE_GUIS.remove(viewerId, self);
+                    return;
+                }
+                Player online = onlineTarget();
+                if (online != null) {
+                    ACTIVE_GUIS.remove(viewerId, self);
+                    viewer.openInventory(new OnlineInterface(viewer, online, plugin).getInventory());
+                    return;
+                }
+                viewer.openInventory(inventory);
+                if (viewer.getOpenInventory().getTopInventory().getHolder() != self) {
+                    ACTIVE_GUIS.remove(viewerId, self);
+                }
+            }
+        }.runTask(plugin);
+    }
+
+    private Player onlineTarget() {
+        String name = offlinePlayer.getName();
+        return name == null ? null : Bukkit.getPlayerExact(name);
     }
 
     @Override
@@ -232,6 +277,11 @@ public class OfflineInterface implements InventoryHolder {
             viewer.sendMessage(IString.color(plugin.getLanguageManager().getMessage("offline.read-only-view")));
             return;
         }
+        if (viewOnly) {
+            evt.setCancelled(true);
+            viewer.sendMessage(IString.color(plugin.getLanguageManager().getMessage("offline.in-use-read-only")));
+            return;
+        }
 
         // 检查编辑权限
         if (!viewer.hasPermission("si.edit")) {
@@ -246,7 +296,7 @@ public class OfflineInterface implements InventoryHolder {
      * @param evt 关闭事件
      */
     private void handleClose(InventoryCloseEvent evt) {
-        if (!loadFailed) {
+        if (!loadFailed && !viewOnly) {
             saveInventoryData();
         }
     }
@@ -255,6 +305,17 @@ public class OfflineInterface implements InventoryHolder {
      * 保存背包数据
      */
     private void saveInventoryData() {
+        // 目标已经在线时写回的 .dat 会被他下线时的保存盖掉，拿走的物品反而多出一份
+        if (onlineTarget() != null) {
+            Map<String, String> placeholders = new HashMap<>();
+            placeholders.put("player", offlinePlayer.getName());
+            String message = plugin.getLanguageManager().getMessage("offline.target-online-not-saved", placeholders);
+            plugin.sendWarning(message);
+            if (viewer.isOnline()) {
+                viewer.sendMessage(IString.color(message));
+            }
+            return;
+        }
         try {
             NBTFile nbtFile = new NBTFile(playerData);
             NBTCompoundList nbtListCompounds = nbtFile.getCompoundList("Inventory");
@@ -400,7 +461,12 @@ public class OfflineInterface implements InventoryHolder {
          */
         @EventHandler
         private void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent evt) {
-            for (OfflineInterface gui : ACTIVE_GUIS.values()) {
+            for (Map.Entry<UUID, OfflineInterface> entry : ACTIVE_GUIS.entrySet()) {
+                OfflineInterface gui = entry.getValue();
+                if (!gui.viewer.isOnline()) {
+                    ACTIVE_GUIS.remove(entry.getKey(), gui);
+                    continue;
+                }
                 if (evt.getName().equalsIgnoreCase(gui.getOfflinePlayer().getName())) {
                     evt.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
                     evt.setKickMessage(IString.color(gui.plugin.getLanguageManager().getMessage("gui.editing-kick")));

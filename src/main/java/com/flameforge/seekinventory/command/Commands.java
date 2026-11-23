@@ -227,7 +227,7 @@ public class Commands implements CommandExecutor {
                 IInventory.openInventory(onlineEndInterface, player);
             } else if (IPlayer.hasOfflinePlayer(targetName)) {
                 OfflineEndInterface offlineEndInterface = new OfflineEndInterface(player, Bukkit.getOfflinePlayer(targetName), plugin);
-                IInventory.openInventory(offlineEndInterface, player);
+                offlineEndInterface.open();
             } else {
                 player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.player-not-found", "player", targetName)));
             }
@@ -302,7 +302,7 @@ public class Commands implements CommandExecutor {
             IInventory.openInventory(onlineInterface, player);
         } else if (IPlayer.hasOfflinePlayer(targetName)) {
             OfflineInterface offlineInterface = new OfflineInterface(player, Bukkit.getOfflinePlayer(targetName), plugin);
-            IInventory.openInventory(offlineInterface, player);
+            offlineInterface.open();
         } else {
             player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.player-not-found", "player", targetName)));
         }

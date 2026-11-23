@@ -291,8 +291,11 @@ public class OnlineInterface implements InventoryHolder {
         new BukkitRunnable() {
             @Override
             public void run() {
+                if (!viewer.isOnline()) {
+                    return;
+                }
                 OfflineInterface offlineInterface = new OfflineInterface(viewer, Bukkit.getOfflinePlayer(target.getName()), plugin);
-                IInventory.openInventory(offlineInterface.getInventory(), viewer);
+                offlineInterface.open();
             }
         }.runTaskLater(plugin, 10);
     }

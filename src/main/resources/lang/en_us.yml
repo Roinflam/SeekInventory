@@ -86,6 +86,8 @@ offline:
   inventory-item-unreadable: "§7[§bSeekInventory§7] §eSkipped an unreadable item in offline player {player} inventory: {error}"
   enderchest-item-unreadable: "§7[§bSeekInventory§7] §eSkipped an unreadable item in offline player {player} ender chest: {error}"
   read-only-view: "§7[§bSeekInventory§7] §cThis player's data could not be fully loaded, so it can be viewed but not changed"
+  in-use-read-only: "§7[§bSeekInventory§7] §cAnother administrator is editing this player's offline data, so it can be viewed but not changed"
+  target-online-not-saved: "§7[§bSeekInventory§7] §cPlayer {player} is back online, so the offline edits were not saved. Please open the online view and make the changes again"
   save-inventory-success: "§7[§bSeekInventory§7] §aSaved offline player {player} inventory edits"
   save-enderchest-success: "§7[§bSeekInventory§7] §aSaved offline player {player} ender chest edits"
   save-inventory-failed: "§7[§bSeekInventory§7] §eFailed to save offline player {player} inventory, using cache: {error}"

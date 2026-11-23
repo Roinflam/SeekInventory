@@ -81,7 +81,7 @@ public class Inv implements CommandExecutor {
             IInventory.openInventory(onlineInterface, player);
         } else if (IPlayer.hasOfflinePlayer(targetName)) {
             OfflineInterface offlineInterface = new OfflineInterface(player, Bukkit.getOfflinePlayer(targetName), plugin);
-            IInventory.openInventory(offlineInterface, player);
+            offlineInterface.open();
         } else {
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("player", targetName);

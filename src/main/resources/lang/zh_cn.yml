@@ -86,6 +86,8 @@ offline:
   inventory-item-unreadable: "§7[§b背包查看§7] §e离线玩家 {player} 的背包中有物品无法读取，已跳过: {error}"
   enderchest-item-unreadable: "§7[§b背包查看§7] §e离线玩家 {player} 的末影箱中有物品无法读取，已跳过: {error}"
   read-only-view: "§7[§b背包查看§7] §c该玩家的数据未能完整读取，本次只能查看，不能修改"
+  in-use-read-only: "§7[§b背包查看§7] §c其他管理员正在编辑该玩家的离线数据，本次只能查看，不能修改"
+  target-online-not-saved: "§7[§b背包查看§7] §c玩家 {player} 已重新上线，本次离线编辑未保存，请改用在线查看重新操作"
   save-inventory-success: "§7[§b背包查看§7] §a已保存离线玩家 {player} 的背包编辑"
   save-enderchest-success: "§7[§b背包查看§7] §a已保存离线玩家 {player} 的末影箱编辑"
   save-inventory-failed: "§7[§b背包查看§7] §e保存离线玩家 {player} 背包失败，使用缓存: {error}"
