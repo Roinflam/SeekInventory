@@ -138,6 +138,13 @@ public class OfflineInterface implements InventoryHolder {
         // 创建占位符物品
         createPlaceholderItem();
 
+        // 服务端那边上一个离线界面没关就又开了新的：旧界面关闭时序号对不上不会写回，拿走的物品会多出一份，所以先写回再读
+        OfflineInterface previous = ACTIVE_GUIS.remove(viewer.getUniqueId());
+        if (previous != null && !previous.loadFailed && !previous.viewOnly
+                && viewer.getOpenInventory().getTopInventory().getHolder() == previous) {
+            previous.saveInventoryData();
+        }
+
         // 加载背包数据
         loadInventoryData();
 

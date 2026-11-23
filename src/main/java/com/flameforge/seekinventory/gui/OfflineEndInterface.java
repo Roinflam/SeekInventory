@@ -130,6 +130,13 @@ public class OfflineEndInterface implements InventoryHolder {
         File playerDataFolder = new File(plugin.getDataFolder().getParentFile().getParentFile(), "world/playerdata/");
         playerData = new File(playerDataFolder, offlinePlayer.getUniqueId().toString() + ".dat");
 
+        // 服务端那边上一个离线界面没关就又开了新的：旧界面关闭时序号对不上不会写回，拿走的物品会多出一份，所以先写回再读
+        OfflineEndInterface previous = ACTIVE_GUIS.remove(viewer.getUniqueId());
+        if (previous != null && !previous.loadFailed && !previous.viewOnly
+                && viewer.getOpenInventory().getTopInventory().getHolder() == previous) {
+            previous.saveEnderChestData();
+        }
+
         // 加载末影箱数据
         loadEnderChestData();
 
