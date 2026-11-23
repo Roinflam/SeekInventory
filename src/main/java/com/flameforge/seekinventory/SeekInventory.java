@@ -9,6 +9,8 @@ import com.flameforge.seekinventory.curios.CuriosHandler;
 import com.flameforge.seekinventory.curios.CuriosSupport;
 import com.flameforge.seekinventory.gui.ClaimInterface;
 import com.flameforge.seekinventory.gui.ClaimMenuInterface;
+import com.flameforge.seekinventory.gui.OfflineEndInterface;
+import com.flameforge.seekinventory.gui.OfflineInterface;
 import com.flameforge.seekinventory.gui.OnlineCuriosInterface;
 import org.bukkit.Bukkit;
 import org.bukkit.entity.Player;
@@ -259,6 +261,11 @@ public class SeekInventory extends JavaPlugin {
 
         // 停止定期清理任务
         stopCleanupTask();
+
+        OfflineInterface.saveAndCloseAll();
+        OfflineEndInterface.saveAndCloseAll();
+        OfflineInterface.cleanup();
+        OfflineEndInterface.cleanup();
 
         // 清理领取界面活跃实例，避免热重载后监听器重复注册
         ClaimInterface.cleanup();

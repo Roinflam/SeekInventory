@@ -389,7 +389,10 @@ public class Commands implements CommandExecutor {
             NBTFile nbtFile = new NBTFile(playerData);
 
             for (NBTCompound nbtCompound : nbtFile.getCompoundList("Inventory")) {
-                ItemStack foundItem = NBTItem.convertNBTtoItem(nbtCompound);
+                ItemStack foundItem = readOfflineItem(nbtCompound, offlinePlayer, false);
+                if (foundItem == null) {
+                    continue;
+                }
                 boolean matches = exactMatch ? foundItem.isSimilar(itemStack) : foundItem.getType().equals(itemStack.getType());
                 if (matches) {
                     player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.found-offline-inv", "player", offlinePlayer.getName())));
@@ -398,7 +401,10 @@ public class Commands implements CommandExecutor {
             }
 
             for (NBTCompound nbtCompound : nbtFile.getCompoundList("EnderItems")) {
-                ItemStack foundItem = NBTItem.convertNBTtoItem(nbtCompound);
+                ItemStack foundItem = readOfflineItem(nbtCompound, offlinePlayer, true);
+                if (foundItem == null) {
+                    continue;
+                }
                 boolean matches = exactMatch ? foundItem.isSimilar(itemStack) : foundItem.getType().equals(itemStack.getType());
                 if (matches) {
                     player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.found-offline-end", "player", offlinePlayer.getName())));
@@ -460,11 +466,11 @@ public class Commands implements CommandExecutor {
             NBTCompoundList invList = nbtFile.getCompoundList("Inventory");
             NBTCompoundList endList = nbtFile.getCompoundList("EnderItems");
 
-            int invRemoved = removeSimilar(invList, itemStack);
+            int invRemoved = removeSimilar(invList, itemStack, offlinePlayer, false);
             if (invRemoved > 0) {
                 player.sendMessage(IString.color(deletedMessage("command.deleted-offline-inv", offlinePlayer.getName(), invRemoved)));
             }
-            int endRemoved = removeSimilar(endList, itemStack);
+            int endRemoved = removeSimilar(endList, itemStack, offlinePlayer, true);
             if (endRemoved > 0) {
                 player.sendMessage(IString.color(deletedMessage("command.deleted-offline-end", offlinePlayer.getName(), endRemoved)));
             }
@@ -495,17 +501,31 @@ public class Commands implements CommandExecutor {
         return removed;
     }
 
-    private static int removeSimilar(NBTCompoundList list, ItemStack itemStack) {
+    private int removeSimilar(NBTCompoundList list, ItemStack itemStack, OfflinePlayer owner, boolean ender) {
         int removed = 0;
         // 倒着删，下标不会错位
         for (int i = list.size() - 1; i >= 0; i--) {
-            ItemStack item = NBTItem.convertNBTtoItem(list.get(i));
+            ItemStack item = readOfflineItem(list.get(i), owner, ender);
             if (item != null && item.isSimilar(itemStack)) {
                 removed += item.getAmount();
                 list.remove(i);
             }
         }
         return removed;
+    }
+
+    // 读不出来的物品（多半是卸掉的模组物品）跳过并在后台记一条，不影响同一份数据里的其他物品
+    private ItemStack readOfflineItem(NBTCompound compound, OfflinePlayer owner, boolean ender) {
+        try {
+            return NBTItem.convertNBTtoItem(compound);
+        } catch (Exception e) {
+            Map<String, String> ph = new HashMap<>();
+            ph.put("player", String.valueOf(owner.getName()));
+            ph.put("error", String.valueOf(e));
+            plugin.sendWarning(plugin.getLanguageManager().getMessage(
+                    ender ? "offline.enderchest-item-unreadable" : "offline.inventory-item-unreadable", ph));
+            return null;
+        }
     }
 
     /**

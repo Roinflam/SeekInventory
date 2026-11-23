@@ -24,6 +24,7 @@ import pers.tany.yukinoaapi.interfacepart.other.IString;
 import pers.tany.yukinoaapi.realizationpart.builder.ItemBuilder;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -64,6 +65,9 @@ public class OfflineEndInterface implements InventoryHolder {
     /** 玩家数据文件 */
     private final File playerData;
 
+    // 有物品读不出来时整份只读，关界面也不写回，免得把读不出的和没读到的物品一起覆盖掉
+    private boolean loadFailed = false;
+
     /**
      * 注册静态监听器（仅首次调用生效）
      *
@@ -82,6 +86,20 @@ public class OfflineEndInterface implements InventoryHolder {
     public static void cleanup() {
         ACTIVE_GUIS.clear();
         registered = false;
+    }
+
+    // 插件停用时监听器随之注销，之后关界面不会再触发保存，所以先把还开着的界面写回再关掉
+    public static void saveAndCloseAll() {
+        for (UUID uuid : new ArrayList<>(ACTIVE_GUIS.keySet())) {
+            OfflineEndInterface gui = ACTIVE_GUIS.remove(uuid);
+            if (gui == null || gui.viewer.getOpenInventory().getTopInventory().getHolder() != gui) {
+                continue;
+            }
+            if (!gui.loadFailed) {
+                gui.saveEnderChestData();
+            }
+            gui.viewer.closeInventory();
+        }
     }
 
     /**
@@ -141,9 +159,13 @@ public class OfflineEndInterface implements InventoryHolder {
             for (NBTCompound nbtCompound : nbtFile.getCompoundList("EnderItems")) {
                 int index = nbtCompound.getInteger("Slot");
                 ItemStack itemStack = NBTItem.convertNBTtoItem(nbtCompound);
+                if (itemStack == null) {
+                    throw new IllegalStateException("slot " + nbtCompound.getInteger("Slot") + " unreadable");
+                }
                 inventory.setItem(index, itemStack);
             }
         } catch (Exception e) {
+            loadFailed = true;
             Map<String, String> placeholders = new HashMap<>();
             placeholders.put("player", offlinePlayer.getName());
             placeholders.put("error", e.getMessage());
@@ -158,6 +180,12 @@ public class OfflineEndInterface implements InventoryHolder {
      * @param evt 点击事件
      */
     private void handleClick(InventoryClickEvent evt) {
+        if (loadFailed) {
+            evt.setCancelled(true);
+            viewer.sendMessage(IString.color(plugin.getLanguageManager().getMessage("offline.read-only-view")));
+            return;
+        }
+
         // 检查编辑权限
         if (!viewer.hasPermission("si.edit")) {
             evt.setCancelled(true);
@@ -171,7 +199,9 @@ public class OfflineEndInterface implements InventoryHolder {
      * @param evt 关闭事件
      */
     private void handleClose(InventoryCloseEvent evt) {
-        saveEnderChestData();
+        if (!loadFailed) {
+            saveEnderChestData();
+        }
     }
 
     /**
@@ -305,7 +335,7 @@ public class OfflineEndInterface implements InventoryHolder {
         @EventHandler
         private void onAsyncPlayerPreLogin(AsyncPlayerPreLoginEvent evt) {
             for (OfflineEndInterface gui : ACTIVE_GUIS.values()) {
-                if (gui.getViewer().isOp() && evt.getName().equals(gui.getOfflinePlayer().getName())) {
+                if (evt.getName().equalsIgnoreCase(gui.getOfflinePlayer().getName())) {
                     evt.setLoginResult(AsyncPlayerPreLoginEvent.Result.KICK_OTHER);
                     evt.setKickMessage(IString.color(gui.plugin.getLanguageManager().getMessage("gui.editing-kick")));
                     break;

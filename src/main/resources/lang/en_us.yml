@@ -83,6 +83,9 @@ snapshot:
 offline:
   load-inventory-failed: "§7[§bSeekInventory§7] §cFailed to load offline player {player} inventory: {error}"
   load-enderchest-failed: "§7[§bSeekInventory§7] §cFailed to load offline player {player} ender chest: {error}"
+  inventory-item-unreadable: "§7[§bSeekInventory§7] §eSkipped an unreadable item in offline player {player} inventory: {error}"
+  enderchest-item-unreadable: "§7[§bSeekInventory§7] §eSkipped an unreadable item in offline player {player} ender chest: {error}"
+  read-only-view: "§7[§bSeekInventory§7] §cThis player's data could not be fully loaded, so it can be viewed but not changed"
   save-inventory-success: "§7[§bSeekInventory§7] §aSaved offline player {player} inventory edits"
   save-enderchest-success: "§7[§bSeekInventory§7] §aSaved offline player {player} ender chest edits"
   save-inventory-failed: "§7[§bSeekInventory§7] §eFailed to save offline player {player} inventory, using cache: {error}"

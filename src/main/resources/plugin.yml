@@ -17,7 +17,7 @@ commands:
   SeekClaim:
     description: 历史备份自助领取
     usage: /SeekClaim <info|list|open|grant|revoke|query|log>
-    aliases: [ siclaim, claim ]
+    aliases: [ siclaim ]
 permissions:
   si.open:
     description: 打开玩家背包/末影箱
