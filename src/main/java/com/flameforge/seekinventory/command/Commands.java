@@ -347,7 +347,7 @@ public class Commands implements CommandExecutor {
      * 处理查找物品ID命令（只匹配材质）
      */
     private void handleCheckId(Player player) {
-        if (!player.isOp()) {
+        if (!player.isOp() && !player.hasPermission("si.check")) {
             player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.no-permission")));
             return;
         }
@@ -361,11 +361,11 @@ public class Commands implements CommandExecutor {
         player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.searching")));
 
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (IInventoryItem.hasAmount(p.getInventory(), itemStack) > 0) {
+            if (p.getInventory().contains(itemStack.getType())) {
                 player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.found-online-inv", "player", p.getName())));
                 Bukkit.getConsoleSender().sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.found-online-inv", "player", p.getName())));
             }
-            if (IInventoryItem.hasAmount(p.getEnderChest(), itemStack) > 0) {
+            if (p.getEnderChest().contains(itemStack.getType())) {
                 player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.found-online-end", "player", p.getName())));
                 Bukkit.getConsoleSender().sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.found-online-end", "player", p.getName())));
             }
@@ -458,25 +458,28 @@ public class Commands implements CommandExecutor {
             NBTCompoundList invList = nbtFile.getCompoundList("Inventory");
             NBTCompoundList endList = nbtFile.getCompoundList("EnderItems");
 
-            for (NBTListCompound nbtListCompound : new ArrayList<>(nbtFile.getCompoundList("Inventory"))) {
-                if (NBTItem.convertNBTtoItem(nbtListCompound).isSimilar(itemStack)) {
-                    invList.remove(nbtListCompound);
-                    player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-offline-inv", "player", offlinePlayer.getName())));
-                    break;
-                }
+            if (removeSimilar(invList, itemStack)) {
+                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-offline-inv", "player", offlinePlayer.getName())));
             }
-
-            for (NBTListCompound nbtListCompound : new ArrayList<>(nbtFile.getCompoundList("EnderItems"))) {
-                if (NBTItem.convertNBTtoItem(nbtListCompound).isSimilar(itemStack)) {
-                    endList.remove(nbtListCompound);
-                    player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-offline-end", "player", offlinePlayer.getName())));
-                    break;
-                }
+            if (removeSimilar(endList, itemStack)) {
+                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-offline-end", "player", offlinePlayer.getName())));
             }
 
             nbtFile.save();
         } catch (Exception ignored) {
         }
+    }
+
+    private static boolean removeSimilar(NBTCompoundList list, ItemStack itemStack) {
+        boolean removed = false;
+        // 倒着删，下标不会错位
+        for (int i = list.size() - 1; i >= 0; i--) {
+            if (NBTItem.convertNBTtoItem(list.get(i)).isSimilar(itemStack)) {
+                list.remove(i);
+                removed = true;
+            }
+        }
+        return removed;
     }
 
     /**
