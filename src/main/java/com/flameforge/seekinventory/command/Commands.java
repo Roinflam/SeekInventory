@@ -427,15 +427,17 @@ public class Commands implements CommandExecutor {
         player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleting")));
 
         for (Player p : Bukkit.getOnlinePlayers()) {
-            if (IInventoryItem.hasAmount(p.getInventory(), itemStack) > 0) {
-                p.getInventory().remove(itemStack);
-                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-online-inv", "player", p.getName())));
-                Bukkit.getConsoleSender().sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-online-inv", "player", p.getName())));
+            int invRemoved = removeSimilar(p.getInventory(), itemStack);
+            if (invRemoved > 0) {
+                String msg = IString.color(deletedMessage("command.deleted-online-inv", p.getName(), invRemoved));
+                player.sendMessage(msg);
+                Bukkit.getConsoleSender().sendMessage(msg);
             }
-            if (IInventoryItem.hasAmount(p.getEnderChest(), itemStack) > 0) {
-                p.getEnderChest().remove(itemStack);
-                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-online-end", "player", p.getName())));
-                Bukkit.getConsoleSender().sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-online-end", "player", p.getName())));
+            int endRemoved = removeSimilar(p.getEnderChest(), itemStack);
+            if (endRemoved > 0) {
+                String msg = IString.color(deletedMessage("command.deleted-online-end", p.getName(), endRemoved));
+                player.sendMessage(msg);
+                Bukkit.getConsoleSender().sendMessage(msg);
             }
         }
 
@@ -458,11 +460,13 @@ public class Commands implements CommandExecutor {
             NBTCompoundList invList = nbtFile.getCompoundList("Inventory");
             NBTCompoundList endList = nbtFile.getCompoundList("EnderItems");
 
-            if (removeSimilar(invList, itemStack)) {
-                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-offline-inv", "player", offlinePlayer.getName())));
+            int invRemoved = removeSimilar(invList, itemStack);
+            if (invRemoved > 0) {
+                player.sendMessage(IString.color(deletedMessage("command.deleted-offline-inv", offlinePlayer.getName(), invRemoved)));
             }
-            if (removeSimilar(endList, itemStack)) {
-                player.sendMessage(IString.color(plugin.getLanguageManager().getMessage("command.deleted-offline-end", "player", offlinePlayer.getName())));
+            int endRemoved = removeSimilar(endList, itemStack);
+            if (endRemoved > 0) {
+                player.sendMessage(IString.color(deletedMessage("command.deleted-offline-end", offlinePlayer.getName(), endRemoved)));
             }
 
             nbtFile.save();
@@ -470,13 +474,35 @@ public class Commands implements CommandExecutor {
         }
     }
 
-    private static boolean removeSimilar(NBTCompoundList list, ItemStack itemStack) {
-        boolean removed = false;
+    private String deletedMessage(String key, String playerName, int amount) {
+        Map<String, String> ph = new HashMap<>();
+        ph.put("player", playerName);
+        ph.put("amount", String.valueOf(amount));
+        return plugin.getLanguageManager().getMessage(key, ph);
+    }
+
+    // Inventory.remove(ItemStack) 要数量也相同才删，这里逐格按 isSimilar 清，返回删掉的总数
+    private static int removeSimilar(Inventory inventory, ItemStack itemStack) {
+        int removed = 0;
+        ItemStack[] contents = inventory.getContents();
+        for (int i = 0; i < contents.length; i++) {
+            ItemStack item = contents[i];
+            if (!IItem.isEmpty(item) && item.isSimilar(itemStack)) {
+                removed += item.getAmount();
+                inventory.setItem(i, null);
+            }
+        }
+        return removed;
+    }
+
+    private static int removeSimilar(NBTCompoundList list, ItemStack itemStack) {
+        int removed = 0;
         // 倒着删，下标不会错位
         for (int i = list.size() - 1; i >= 0; i--) {
-            if (NBTItem.convertNBTtoItem(list.get(i)).isSimilar(itemStack)) {
+            ItemStack item = NBTItem.convertNBTtoItem(list.get(i));
+            if (item != null && item.isSimilar(itemStack)) {
+                removed += item.getAmount();
                 list.remove(i);
-                removed = true;
             }
         }
         return removed;

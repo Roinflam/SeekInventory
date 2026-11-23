@@ -190,10 +190,10 @@ command:
   # 删除消息
   deleting: "§7[§b背包查看§7] §a正在删除..."
   delete-complete: "§7[§b背包查看§7] §a删除完毕"
-  deleted-online-inv: "§7[§b背包查看§7] §a在线玩家{player}背包拥有此物品，已删除"
-  deleted-online-end: "§7[§b背包查看§7] §a在线玩家{player}末影箱拥有此物品，已删除"
-  deleted-offline-inv: "§7[§b背包查看§7] §7离线玩家{player}背包拥有此物品，已删除"
-  deleted-offline-end: "§7[§b背包查看§7] §7离线玩家{player}末影箱拥有此物品，已删除"
+  deleted-online-inv: "§7[§b背包查看§7] §a已删除在线玩家{player}背包中的此物品，共 {amount} 个"
+  deleted-online-end: "§7[§b背包查看§7] §a已删除在线玩家{player}末影箱中的此物品，共 {amount} 个"
+  deleted-offline-inv: "§7[§b背包查看§7] §7已删除离线玩家{player}背包中的此物品，共 {amount} 个"
+  deleted-offline-end: "§7[§b背包查看§7] §7已删除离线玩家{player}末影箱中的此物品，共 {amount} 个"
 
   # 快照列表
   snapshot-header: "§6§l========== §b{player}的{type}快照 §f[第{page}页/共{total}页] §6§l=========="

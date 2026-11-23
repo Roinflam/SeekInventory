@@ -190,10 +190,10 @@ command:
   # Delete Messages
   deleting: "§7[§bSeekInventory§7] §aDeleting..."
   delete-complete: "§7[§bSeekInventory§7] §aDeletion complete"
-  deleted-online-inv: "§7[§bSeekInventory§7] §aDeleted from online player {player}'s inventory"
-  deleted-online-end: "§7[§bSeekInventory§7] §aDeleted from online player {player}'s ender chest"
-  deleted-offline-inv: "§7[§bSeekInventory§7] §7Deleted from offline player {player}'s inventory"
-  deleted-offline-end: "§7[§bSeekInventory§7] §7Deleted from offline player {player}'s ender chest"
+  deleted-online-inv: "§7[§bSeekInventory§7] §aDeleted {amount} of this item from online player {player}'s inventory"
+  deleted-online-end: "§7[§bSeekInventory§7] §aDeleted {amount} of this item from online player {player}'s ender chest"
+  deleted-offline-inv: "§7[§bSeekInventory§7] §7Deleted {amount} of this item from offline player {player}'s inventory"
+  deleted-offline-end: "§7[§bSeekInventory§7] §7Deleted {amount} of this item from offline player {player}'s ender chest"
 
   # Snapshot List
   snapshot-header: "§6§l========== §b{player}'s {type} Snapshots §f[Page {page}/{total}] §6§l=========="
