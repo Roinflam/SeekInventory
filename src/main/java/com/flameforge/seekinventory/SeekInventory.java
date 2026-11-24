@@ -23,7 +23,7 @@ import org.bukkit.inventory.ItemStack;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.scheduler.BukkitRunnable;
 import org.bukkit.scheduler.BukkitTask;
-import com.flameforge.seekinventory.bstats.Metrics;
+import org.bstats.bukkit.Metrics;
 import com.flameforge.seekinventory.command.Commands;
 import com.flameforge.seekinventory.command.Inv;
 import com.flameforge.seekinventory.command.InvTabComplete;
